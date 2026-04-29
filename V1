@@ -1,0 +1,1052 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COMLURB · Radar de Pessoas</title>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+  --bg:#07111f;
+  --panel:#0d1b2f;
+  --line:#274260;
+  --ink:#f2f6ff;
+  --muted:#9fb0c7;
+  --blue:#6da5d8;
+  --orange:#e87535;
+  --green:#78aaa3;
+  --red:#d96161;
+  --yellow:#f0b36d;
+  --shadow:0 18px 45px rgba(0,0,0,.28);
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:Inter,Segoe UI,Arial,sans-serif;
+}
+
+.app{
+  max-width:1700px;
+  margin:auto;
+  padding:18px;
+}
+
+.header{
+  display:flex;
+  align-items:center;
+  gap:22px;
+  padding:20px 22px;
+  border:1px solid rgba(111,164,216,.25);
+  border-radius:22px;
+  background:#0b1a2e;
+  box-shadow:var(--shadow);
+}
+
+.logoImg{
+  width:280px;
+  max-height:78px;
+  object-fit:contain;
+  flex:0 0 auto;
+}
+
+.logoFallback{
+  width:170px;
+  height:46px;
+  border-radius:12px;
+  background:#fff;
+  color:#0b1f3a;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  font-weight:950;
+  letter-spacing:.08em;
+  flex:0 0 auto;
+}
+
+.title{flex:1}
+
+.eyebrow{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:#b9c9dc;
+}
+
+h1{
+  margin:4px 0;
+  font-size:clamp(25px,2vw,38px);
+  line-height:1.05;
+}
+
+.sub{
+  color:#c5d5e8;
+  font-size:14px;
+}
+
+.nav{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.nav button{
+  color:#dbe8ff;
+  border:1px solid rgba(255,255,255,.22);
+  padding:10px 15px;
+  border-radius:999px;
+  background:rgba(255,255,255,.04);
+  font-weight:850;
+  cursor:pointer;
+}
+
+.nav button.active{
+  border-color:var(--orange);
+  background:rgba(232,117,53,.18);
+}
+
+.status{
+  margin:12px 0;
+  padding:10px 12px;
+  border:1px solid rgba(232,117,53,.55);
+  background:#1b2130;
+  border-radius:14px;
+  color:#ffd4b8;
+  font-size:13px;
+}
+
+.topFilters{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:14px 0 10px;
+}
+
+.search{
+  flex:1;
+  min-width:260px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  border-radius:999px;
+  padding:11px 15px;
+  color:#fff;
+  outline:none;
+  font-weight:800;
+}
+
+.search::placeholder{color:#7f90aa}
+
+.btn{
+  border:1px solid rgba(255,255,255,.18);
+  background:#0d1b2f;
+  color:#fff;
+  border-radius:999px;
+  padding:11px 15px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.btn.orange{
+  border-color:rgba(232,117,53,.75);
+  background:rgba(232,117,53,.16);
+}
+
+.btn:hover{
+  background:rgba(232,117,53,.20);
+}
+
+.drawer{
+  display:none;
+  border:1px solid var(--line);
+  background:rgba(13,27,47,.96);
+  border-radius:20px;
+  padding:14px;
+  box-shadow:var(--shadow);
+  margin-bottom:12px;
+}
+
+.drawer.open{display:block}
+
+.controls{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(170px,1fr));
+  gap:12px;
+}
+
+.field{
+  border:1px solid var(--line);
+  background:#0b1a2e;
+  border-radius:16px;
+  padding:10px 12px;
+}
+
+label{
+  display:block;
+  color:#aebbd0;
+  font-size:10px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+select{
+  width:100%;
+  background:transparent;
+  border:0;
+  color:#fff;
+  font-weight:800;
+  outline:none;
+}
+
+select option{
+  background:#0d1b2f;
+  color:#fff;
+}
+
+.chips{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+.chip{
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  border:1px solid rgba(109,165,216,.32);
+  background:rgba(13,32,55,.78);
+  color:#dceaff;
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:12px;
+  font-weight:800;
+}
+
+.chip button{
+  border:0;
+  background:rgba(255,255,255,.10);
+  color:#fff;
+  border-radius:50%;
+  width:18px;
+  height:18px;
+  cursor:pointer;
+}
+
+.kpis{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:12px;
+  margin-bottom:14px;
+}
+
+.kpi{
+  position:relative;
+  min-height:104px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.kpi:before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  height:4px;
+  background:var(--blue);
+}
+
+.kpi.orange:before{background:var(--orange)}
+.kpi.green:before{background:var(--green)}
+.kpi.red:before{background:var(--red)}
+.kpi.yellow:before{background:var(--yellow)}
+
+.kpi span{
+  color:#aebbd0;
+  font-size:11px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  font-weight:950;
+}
+
+.kpi strong{
+  display:block;
+  font-size:clamp(22px,1.9vw,34px);
+  margin:9px 0 4px;
+  color:#fff;
+  font-weight:950;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.kpi small{color:#a8b8cf}
+
+.view{display:none}
+.view.active{display:block}
+
+.grid2{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 420px;
+  gap:14px;
+}
+
+.grid3{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin-top:14px;
+}
+
+.panel{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+
+.panelHead{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  padding:16px 18px;
+  border-bottom:1px solid var(--line);
+  background:#0b1a2e;
+}
+
+.panel h2,.panel h3{
+  margin:0;
+  color:#fff;
+  font-size:16px;
+}
+
+.hint{
+  color:#a8b8cf;
+  font-size:12px;
+  margin-top:4px;
+}
+
+.chartBox{
+  height:340px;
+  padding:14px;
+}
+
+.chartBox.small{height:290px}
+
+.side{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+
+.highlights{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  padding:12px;
+}
+
+.hl{
+  border:1px solid rgba(255,255,255,.10);
+  background:#0b1a2e;
+  border-radius:16px;
+  padding:12px;
+  min-height:86px;
+  position:relative;
+  overflow:hidden;
+}
+
+.hl:before{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:0;
+  width:4px;
+  background:var(--blue);
+}
+
+.hl.warn:before{background:var(--orange)}
+.hl.good:before{background:var(--green)}
+.hl.danger:before{background:var(--red)}
+
+.hl small{
+  display:block;
+  color:#9fb0c7;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.10em;
+  font-size:9px;
+  margin-bottom:6px;
+}
+
+.hl b{
+  display:block;
+  font-size:18px;
+  color:#fff;
+  line-height:1.15;
+  overflow-wrap:anywhere;
+}
+
+.hl span{
+  color:#c2d1e6;
+  font-size:12px;
+}
+
+.rank{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  padding:11px 14px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+.rank b{
+  color:#fff;
+  font-size:13px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.rank small{
+  display:block;
+  color:#a8b8cf;
+  margin-top:3px;
+}
+
+.badge{
+  font-size:12px;
+  color:#dceaff;
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:7px 10px;
+  background:#0d2037;
+  white-space:nowrap;
+}
+
+.tableWrap{
+  max-height:620px;
+  overflow:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:12px;
+}
+
+th,td{
+  padding:9px 10px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+th{
+  position:sticky;
+  top:0;
+  background:#10243d;
+  color:#c7d8ef;
+  text-align:left;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  z-index:2;
+}
+
+td.num,th.num{text-align:right}
+
+tr:hover td{background:#102946}
+
+.risk{
+  display:inline-flex;
+  padding:5px 9px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:950;
+}
+
+.baixo{background:rgba(120,170,163,.18);color:#aaf0df}
+.medio{background:rgba(240,179,109,.15);color:#ffd7a3}
+.alto{background:rgba(232,117,53,.16);color:#ffc2a3}
+.critico{background:rgba(217,97,97,.18);color:#ffc4c4}
+
+.footer{
+  margin:16px 0 4px;
+  color:#8fa1ba;
+  font-size:12px;
+  text-align:center;
+}
+
+@media(max-width:1250px){
+  .header{align-items:flex-start;flex-direction:column}
+  .grid2,.grid3{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  .controls{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:760px){
+  .app{padding:10px}
+  .kpis,.controls,.highlights{grid-template-columns:1fr}
+  .logoImg{width:240px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header class="header">
+  <img class="logoImg" src="RIOPREFEITURA Comlurb horizontal monocromatica branco.png" alt="Prefeitura do Rio · COMLURB" onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex';">
+  <div id="logoFallback" class="logoFallback">COMLURB</div>
+
+  <div class="title">
+    <div class="eyebrow">RADAR DA CIDADE · CAMADA DE PESSOAS</div>
+    <h1>Radar de Pessoas COMLURB</h1>
+    <div class="sub">Efetivo, afastamentos, envelhecimento funcional, moradia e risco operacional</div>
+  </div>
+
+  <nav class="nav">
+    <button class="active" data-view="exec">Executivo</button>
+    <button data-view="risco">Risco</button>
+    <button data-view="territorio">Território</button>
+    <button data-view="afastamentos">Afastamentos</button>
+    <button data-view="analitico">Analítico</button>
+  </nav>
+</header>
+
+<div id="status" class="status">Carregando dados publicados do Google Sheets...</div>
+
+<div class="topFilters">
+  <button class="btn orange" onclick="toggleFilters()">Filtros</button>
+  <input id="busca" class="search" placeholder="Busca rápida por setor, gerência, cargo, bairro ou cidade...">
+  <button class="btn" onclick="resetFilters()">Limpar</button>
+  <span id="summary" class="badge">0 registros</span>
+</div>
+
+<div id="drawer" class="drawer">
+  <div class="controls">
+    <div class="field"><label>Diretoria</label><select id="fDiretoria"></select></div>
+    <div class="field"><label>Super. / Coord.</label><select id="fSuper"></select></div>
+    <div class="field"><label>Gerência</label><select id="fGerencia"></select></div>
+    <div class="field"><label>Setor</label><select id="fSetor"></select></div>
+    <div class="field"><label>Tipo cargo</label><select id="fTipoCargo"></select></div>
+    <div class="field"><label>Situação</label><select id="fSituacao"></select></div>
+    <div class="field"><label>Faixa etária</label><select id="fFaixaIdade"></select></div>
+    <div class="field"><label>Moradia</label><select id="fMoradia"></select></div>
+  </div>
+</div>
+
+<div id="chips" class="chips"></div>
+
+<section class="kpis">
+  <div class="kpi"><span>Efetivo total</span><strong id="kTotal">0</strong><small>Registros no filtro atual</small></div>
+  <div class="kpi green"><span>Ativos</span><strong id="kAtivos">0</strong><small>Sem afastamento vigente</small></div>
+  <div class="kpi orange"><span>Afastados</span><strong id="kAfastados">0</strong><small>Com afastamento vigente</small></div>
+  <div class="kpi red"><span>Taxa afastamento</span><strong id="kTaxa">0%</strong><small>Afastados / efetivo</small></div>
+  <div class="kpi yellow"><span>Média idade</span><strong id="kIdade">0</strong><small>Anos</small></div>
+  <div class="kpi"><span>Tempo de casa</span><strong id="kCasa">0</strong><small>Média em anos</small></div>
+</section>
+
+<main id="exec" class="view active">
+  <section class="grid2">
+    <div class="panel">
+      <div class="panelHead"><div><h2>Efetivo por diretoria</h2><div class="hint">Distribuição da força de trabalho.</div></div></div>
+      <div class="chartBox"><canvas id="chartDiretoria"></canvas></div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <div class="panelHead"><div><h3>Insights principais</h3><div class="hint">Leitura automática do filtro atual.</div></div></div>
+        <div class="highlights">
+          <div class="hl"><small>Maior diretoria</small><b id="iDir">-</b><span id="iDirSub">-</span></div>
+          <div class="hl warn"><small>Maior taxa afast.</small><b id="iAfast">-</b><span id="iAfastSub">-</span></div>
+          <div class="hl danger"><small>Acima de 60</small><b id="i60">0</b><span>empregados</span></div>
+          <div class="hl good"><small>Fora do Rio</small><b id="iFora">0%</b><span>moradia informada</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panelHead"><div><h3>Top setores</h3><div class="hint">Maior efetivo no filtro.</div></div></div>
+        <div id="rankSetores"></div>
+      </div>
+    </aside>
+  </section>
+
+  <section class="grid3">
+    <div class="panel"><div class="panelHead"><div><h2>Situação</h2><div class="hint">Ativos x afastados.</div></div></div><div class="chartBox small"><canvas id="chartSituacao"></canvas></div></div>
+    <div class="panel"><div class="panelHead"><div><h2>Tipo de cargo</h2><div class="hint">Operacional x administrativo.</div></div></div><div class="chartBox small"><canvas id="chartTipoCargo"></canvas></div></div>
+    <div class="panel"><div class="panelHead"><div><h2>Faixa etária</h2><div class="hint">Perfil etário.</div></div></div><div class="chartBox small"><canvas id="chartIdade"></canvas></div></div>
+  </section>
+</main>
+
+<main id="risco" class="view">
+  <section class="grid2">
+    <div class="panel"><div class="panelHead"><div><h2>Ranking de risco por setor</h2><div class="hint">Índice composto de risco funcional.</div></div></div><div class="chartBox"><canvas id="chartRisco"></canvas></div></div>
+    <div class="panel"><div class="panelHead"><div><h2>Tempo de casa</h2><div class="hint">Distribuição por permanência.</div></div></div><div class="chartBox"><canvas id="chartCasa"></canvas></div></div>
+  </section>
+</main>
+
+<main id="territorio" class="view">
+  <section class="grid2">
+    <div class="panel"><div class="panelHead"><div><h2>Top bairros de moradia</h2><div class="hint">Concentração residencial.</div></div></div><div class="chartBox"><canvas id="chartBairros"></canvas></div></div>
+    <div class="panel"><div class="panelHead"><div><h2>Moradia Rio x fora do Rio</h2><div class="hint">Distribuição territorial.</div></div></div><div class="chartBox"><canvas id="chartMoradia"></canvas></div></div>
+  </section>
+</main>
+
+<main id="afastamentos" class="view">
+  <section class="grid2">
+    <div class="panel"><div class="panelHead"><div><h2>Afastamentos por diretoria</h2><div class="hint">Volume absoluto.</div></div></div><div class="chartBox"><canvas id="chartAfastDir"></canvas></div></div>
+    <div class="panel"><div class="panelHead"><div><h2>Tipo de afastamento</h2><div class="hint">INSS e outros.</div></div></div><div class="chartBox"><canvas id="chartTipoAfast"></canvas></div></div>
+  </section>
+</main>
+
+<main id="analitico" class="view">
+  <div class="panel">
+    <div class="panelHead">
+      <div><h2>Base analítica agregada por setor</h2><div class="hint">Sem exposição de dados pessoais sensíveis.</div></div>
+      <button class="btn" onclick="downloadCSV()">Exportar CSV</button>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Diretoria</th><th>Super./Coord.</th><th>Gerência</th><th>Setor</th>
+            <th class="num">Efetivo</th><th class="num">Afast.</th><th class="num">Taxa</th>
+            <th class="num">Idade</th><th class="num">Casa</th><th class="num">+60</th><th class="num">Fora RJ</th><th>Risco</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="footer">
+  COMLURB · Radar de Pessoas · Painel agregado sem CPF, RG, endereço completo, telefone, e-mail, nome individual ou raça/cor
+</div>
+
+</div>
+
+<script>
+const DATA_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRE3Q_RdpZOqc4f3O3fQirMQkEXQWyBkiIlXB6LZWgqTZbItGBHAxUHf2-0kEcALDIUfyPeK7GyBQrB/pub?output=csv";
+
+let rawData = [];
+let charts = {};
+let groupedLast = [];
+
+const $ = id => document.getElementById(id);
+
+function norm(v){return String(v ?? "").trim().replace(/\s+/g," ")}
+function upper(v){return norm(v).toUpperCase()}
+function num(v){const n=Number(String(v??"").replace(/\./g,"").replace(",",".").replace(/[^\d.-]/g,""));return isNaN(n)?0:n}
+function fmt(n){return Number(n||0).toLocaleString("pt-BR")}
+function pct(n){return `${Number(n||0).toFixed(1).replace(".",",")}%`}
+function avg(arr){const v=arr.map(num).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0}
+
+function normalizeHeader(h){
+  return String(h||"").trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase();
+}
+
+function get(row,names){
+  for(const name of names){
+    const key = normalizeHeader(name);
+    if(row[key] !== undefined && String(row[key]).trim() !== "") return row[key];
+  }
+  return "";
+}
+
+function normalizeRows(rows){
+  return rows.map(r=>{
+    const o = {};
+    Object.keys(r).forEach(k=>{
+      o[normalizeHeader(k)] = r[k];
+    });
+    return o;
+  });
+}
+
+function faixaIdade(i){
+  i=num(i);
+  if(i<=30)return"Até 30";
+  if(i<=40)return"31 a 40";
+  if(i<=50)return"41 a 50";
+  if(i<=60)return"51 a 60";
+  if(i<=65)return"61 a 65";
+  return"Acima de 65";
+}
+
+function faixaCasa(i){
+  i=num(i);
+  if(i<=5)return"Até 5";
+  if(i<=10)return"6 a 10";
+  if(i<=20)return"11 a 20";
+  if(i<=30)return"21 a 30";
+  if(i<=40)return"31 a 40";
+  return"Acima de 40";
+}
+
+function cleanData(rows){
+  return rows.filter(r=>norm(get(r,["REGISTRO"]))!=="").map(r=>{
+    const diretoria=norm(get(r,["DIRETORIA"]))||"Não informado";
+    const superintendencia=norm(get(r,["SUPERINTENDÊNCIA","SUPERINTENDENCIA"]))||"Não informado";
+    const gerencia=norm(get(r,["PAISETOR"]))||"Não informado";
+    const setorCod=norm(get(r,["SETOR"]))||"Não informado";
+    const setor=norm(get(r,["DESCRIÇÃO","DESCRICAO"]))||setorCod;
+    const cargo=norm(get(r,["FUNCAOCARGO"]))||"Não informado";
+    const tipoCargo=norm(get(r,["TIPOCARGO"]))||"Não informado";
+    const afastamento=norm(get(r,["AFASTAMENTO"]));
+    const tipoAfastamento=norm(get(r,["TIPOAFASTAMENTO"]))||(afastamento?"Não informado":"Sem afastamento");
+    const idade=num(get(r,["IDADEANOS"]));
+    const casa=num(get(r,["TPCASAANOS"]));
+    const bairroMoradia=norm(get(r,["BAIRROENDER"]))||"Não informado";
+    const cidadeMoradia=norm(get(r,["CIDADEENDER"]))||"Não informado";
+    const situacao=afastamento?"Afastado":"Ativo";
+    const moraRio=upper(cidadeMoradia)==="RIO DE JANEIRO"?"Rio de Janeiro":"Fora do Rio";
+
+    return {
+      diretoria,superintendencia,gerencia,setor,setorCod,cargo,tipoCargo,
+      afastamento,tipoAfastamento,idade,casa,
+      faixaIdade:faixaIdade(idade),faixaCasa:faixaCasa(casa),
+      bairroMoradia,cidadeMoradia,situacao,moraRio
+    };
+  });
+}
+
+function unique(data,field){
+  return ["Todos",...[...new Set(data.map(d=>d[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"))];
+}
+
+function fill(id,opts){
+  $(id).innerHTML=opts.map(o=>`<option value="${o}">${o}</option>`).join("");
+}
+
+function setupFilters(){
+  fill("fDiretoria",unique(rawData,"diretoria"));
+  fill("fSuper",unique(rawData,"superintendencia"));
+  fill("fGerencia",unique(rawData,"gerencia"));
+  fill("fSetor",unique(rawData,"setor"));
+  fill("fTipoCargo",unique(rawData,"tipoCargo"));
+  fill("fSituacao",["Todos","Ativo","Afastado"]);
+  fill("fFaixaIdade",["Todos","Até 30","31 a 40","41 a 50","51 a 60","61 a 65","Acima de 65"]);
+  fill("fMoradia",["Todos","Rio de Janeiro","Fora do Rio"]);
+
+  ["fDiretoria","fSuper","fGerencia","fSetor","fTipoCargo","fSituacao","fFaixaIdade","fMoradia"].forEach(id=>{
+    $(id).addEventListener("change",render);
+  });
+
+  $("busca").addEventListener("input",render);
+}
+
+function toggleFilters(){$("drawer").classList.toggle("open")}
+
+function resetFilters(){
+  ["fDiretoria","fSuper","fGerencia","fSetor","fTipoCargo","fSituacao","fFaixaIdade","fMoradia"].forEach(id=>$(id).value="Todos");
+  $("busca").value="";
+  render();
+}
+
+function filtered(){
+  const fd=$("fDiretoria").value,fs=$("fSuper").value,fg=$("fGerencia").value,fset=$("fSetor").value,ft=$("fTipoCargo").value,fst=$("fSituacao").value,fi=$("fFaixaIdade").value,fm=$("fMoradia").value,q=upper($("busca").value);
+
+  return rawData.filter(d=>{
+    if(fd!=="Todos"&&d.diretoria!==fd)return false;
+    if(fs!=="Todos"&&d.superintendencia!==fs)return false;
+    if(fg!=="Todos"&&d.gerencia!==fg)return false;
+    if(fset!=="Todos"&&d.setor!==fset)return false;
+    if(ft!=="Todos"&&d.tipoCargo!==ft)return false;
+    if(fst!=="Todos"&&d.situacao!==fst)return false;
+    if(fi!=="Todos"&&d.faixaIdade!==fi)return false;
+    if(fm!=="Todos"&&d.moraRio!==fm)return false;
+    if(q){
+      const txt=upper(`${d.diretoria} ${d.superintendencia} ${d.gerencia} ${d.setor} ${d.cargo} ${d.bairroMoradia} ${d.cidadeMoradia}`);
+      if(!txt.includes(q))return false;
+    }
+    return true;
+  });
+}
+
+function updateChips(){
+  const filters=[["Diretoria","fDiretoria"],["Super./Coord.","fSuper"],["Gerência","fGerencia"],["Setor","fSetor"],["Tipo","fTipoCargo"],["Situação","fSituacao"],["Idade","fFaixaIdade"],["Moradia","fMoradia"]];
+
+  $("chips").innerHTML=filters.filter(([_,id])=>$(id).value!=="Todos").map(([label,id])=>`<span class="chip">${label}: ${$(id).value}<button onclick="clearFilter('${id}')">×</button></span>`).join("");
+}
+
+function clearFilter(id){$(id).value="Todos";render()}
+
+function countBy(data,field){
+  const m={};
+  data.forEach(d=>{const k=d[field]||"Não informado";m[k]=(m[k]||0)+1});
+  return Object.entries(m).sort((a,b)=>b[1]-a[1]);
+}
+
+function topN(data,field,n=10){return countBy(data,field).slice(0,n)}
+
+function destroy(id){if(charts[id]){charts[id].destroy();delete charts[id]}}
+
+function chartOpts(type){
+  const opt={
+    responsive:true,
+    maintainAspectRatio:false,
+    plugins:{
+      legend:{display:type!=="bar",labels:{color:"#c7d8ef",boxWidth:12}},
+      tooltip:{backgroundColor:"#0b1a2e",titleColor:"#fff",bodyColor:"#dceaff"}
+    }
+  };
+  if(type==="bar"){
+    opt.scales={x:{ticks:{color:"#9fb0c7"},grid:{color:"rgba(255,255,255,.06)"}},y:{ticks:{color:"#9fb0c7"},grid:{color:"rgba(255,255,255,.06)"}}};
+  }
+  return opt;
+}
+
+function makeChart(id,type,labels,values,extra={}){
+  destroy(id);
+  charts[id]=new Chart($(id),{
+    type,
+    data:{
+      labels,
+      datasets:[{
+        data:values,
+        borderRadius:type==="bar"?8:0,
+        borderColor:"rgba(255,255,255,.12)",
+        borderWidth:1,
+        backgroundColor:[
+          "rgba(109,165,216,.82)",
+          "rgba(232,117,53,.82)",
+          "rgba(120,170,163,.82)",
+          "rgba(240,179,109,.82)",
+          "rgba(217,97,97,.82)",
+          "rgba(160,190,220,.72)",
+          "rgba(99,125,158,.72)",
+          "rgba(186,126,95,.72)"
+        ]
+      }]
+    },
+    options:{...chartOpts(type),...extra}
+  });
+}
+
+function makeH(id,labels,values){
+  makeChart(id,"bar",labels,values,{indexAxis:"y",plugins:{legend:{display:false}}});
+}
+
+function riskScore(g){
+  const total=g.length||1;
+  const afast=g.filter(x=>x.situacao==="Afastado").length/total;
+  const acima60=g.filter(x=>x.idade>=60).length/total;
+  const casa30=g.filter(x=>x.casa>=30).length/total;
+  const oper=g.filter(x=>upper(x.tipoCargo).includes("OPER")).length/total;
+  const fora=g.filter(x=>x.moraRio==="Fora do Rio").length/total;
+  return Math.round(afast*35+acima60*25+casa30*20+oper*10+fora*10);
+}
+
+function riskLevel(s){
+  if(s>=76)return"Crítico";
+  if(s>=51)return"Alto";
+  if(s>=26)return"Médio";
+  return"Baixo";
+}
+
+function riskClass(l){return l.toLowerCase().replace("í","i").replace("é","e")}
+
+function groupBySetor(data){
+  const m={};
+  data.forEach(d=>{
+    const k=`${d.diretoria}|${d.superintendencia}|${d.gerencia}|${d.setor}`;
+    if(!m[k])m[k]=[];
+    m[k].push(d);
+  });
+
+  return Object.values(m).map(g=>{
+    const f=g[0],total=g.length,afast=g.filter(x=>x.situacao==="Afastado").length,score=riskScore(g),level=riskLevel(score);
+    return {
+      diretoria:f.diretoria,
+      superintendencia:f.superintendencia,
+      gerencia:f.gerencia,
+      setor:f.setor,
+      total,
+      afast,
+      taxa:total?afast/total*100:0,
+      idade:avg(g.map(x=>x.idade)),
+      casa:avg(g.map(x=>x.casa)),
+      acima60:total?g.filter(x=>x.idade>=60).length/total*100:0,
+      fora:total?g.filter(x=>x.moraRio==="Fora do Rio").length/total*100:0,
+      score,
+      level
+    };
+  }).sort((a,b)=>b.score-a.score||b.total-a.total);
+}
+
+function render(){
+  const data=filtered();
+  const total=data.length;
+  const afast=data.filter(d=>d.situacao==="Afastado").length;
+  const ativos=total-afast;
+  const grouped=groupBySetor(data);
+  groupedLast=grouped;
+
+  updateChips();
+
+  $("summary").textContent=`${fmt(total)} registros`;
+  $("kTotal").textContent=fmt(total);
+  $("kAtivos").textContent=fmt(ativos);
+  $("kAfastados").textContent=fmt(afast);
+  $("kTaxa").textContent=pct(total?afast/total*100:0);
+  $("kIdade").textContent=avg(data.map(d=>d.idade)).toFixed(1).replace(".",",");
+  $("kCasa").textContent=avg(data.map(d=>d.casa)).toFixed(1).replace(".",",");
+
+  const dirTop=topN(data,"diretoria",1)[0]||["-",0];
+  const afastTop=grouped.filter(g=>g.total>=10).sort((a,b)=>b.taxa-a.taxa)[0]||{setor:"-",taxa:0,afast:0,total:0};
+  const acima60=data.filter(d=>d.idade>=60).length;
+  const fora=data.filter(d=>d.moraRio==="Fora do Rio").length;
+
+  $("iDir").textContent=dirTop[0];
+  $("iDirSub").textContent=`${fmt(dirTop[1])} empregados`;
+  $("iAfast").textContent=afastTop.setor;
+  $("iAfastSub").textContent=`${pct(afastTop.taxa)} · ${fmt(afastTop.afast)} de ${fmt(afastTop.total)}`;
+  $("i60").textContent=fmt(acima60);
+  $("iFora").textContent=pct(total?fora/total*100:0);
+
+  $("rankSetores").innerHTML=grouped.slice(0,8).map(r=>`
+    <div class="rank">
+      <div><b>${r.setor}</b><small>${r.gerencia} · ${fmt(r.total)} empregados</small></div>
+      <span class="badge">${pct(r.taxa)}</span>
+    </div>
+  `).join("");
+
+  const dir=topN(data,"diretoria",10);
+  makeChart("chartDiretoria","bar",dir.map(x=>x[0]),dir.map(x=>x[1]));
+
+  const sit=countBy(data,"situacao");
+  makeChart("chartSituacao","doughnut",sit.map(x=>x[0]),sit.map(x=>x[1]),{cutout:"62%"});
+
+  const tipo=topN(data,"tipoCargo",8);
+  makeChart("chartTipoCargo","doughnut",tipo.map(x=>x[0]),tipo.map(x=>x[1]),{cutout:"58%"});
+
+  const idadeOrder=["Até 30","31 a 40","41 a 50","51 a 60","61 a 65","Acima de 65"];
+  const idadeMap=Object.fromEntries(countBy(data,"faixaIdade"));
+  makeChart("chartIdade","bar",idadeOrder,idadeOrder.map(x=>idadeMap[x]||0));
+
+  const casaOrder=["Até 5","6 a 10","11 a 20","21 a 30","31 a 40","Acima de 40"];
+  const casaMap=Object.fromEntries(countBy(data,"faixaCasa"));
+  makeChart("chartCasa","bar",casaOrder,casaOrder.map(x=>casaMap[x]||0));
+
+  const risco=grouped.slice(0,12);
+  makeH("chartRisco",risco.map(x=>x.setor),risco.map(x=>x.score));
+
+  const bairros=topN(data.filter(d=>d.bairroMoradia!=="Não informado"),"bairroMoradia",12);
+  makeH("chartBairros",bairros.map(x=>x[0]),bairros.map(x=>x[1]));
+
+  const moradia=countBy(data,"moraRio");
+  makeChart("chartMoradia","doughnut",moradia.map(x=>x[0]),moradia.map(x=>x[1]),{cutout:"62%"});
+
+  const afastados=data.filter(d=>d.situacao==="Afastado");
+  const afastDir=topN(afastados,"diretoria",10);
+  makeChart("chartAfastDir","bar",afastDir.map(x=>x[0]),afastDir.map(x=>x[1]));
+
+  const tipoAfast=topN(afastados,"tipoAfastamento",10);
+  makeChart("chartTipoAfast","doughnut",tipoAfast.map(x=>x[0]),tipoAfast.map(x=>x[1]),{cutout:"58%"});
+
+  $("tbody").innerHTML=grouped.slice(0,300).map(r=>`
+    <tr>
+      <td>${r.diretoria}</td>
+      <td>${r.superintendencia}</td>
+      <td>${r.gerencia}</td>
+      <td>${r.setor}</td>
+      <td class="num">${fmt(r.total)}</td>
+      <td class="num">${fmt(r.afast)}</td>
+      <td class="num">${pct(r.taxa)}</td>
+      <td class="num">${r.idade.toFixed(1).replace(".",",")}</td>
+      <td class="num">${r.casa.toFixed(1).replace(".",",")}</td>
+      <td class="num">${pct(r.acima60)}</td>
+      <td class="num">${pct(r.fora)}</td>
+      <td><span class="risk ${riskClass(r.level)}">${r.score} · ${r.level}</span></td>
+    </tr>
+  `).join("");
+}
+
+function downloadCSV(){
+  const header=["Diretoria","Superintendencia","Gerencia","Setor","Efetivo","Afastados","Taxa","Idade_Media","Tempo_Casa","Acima_60","Fora_Rio","Risco","Nivel"];
+  const lines=groupedLast.map(r=>[r.diretoria,r.superintendencia,r.gerencia,r.setor,r.total,r.afast,r.taxa.toFixed(2),r.idade.toFixed(2),r.casa.toFixed(2),r.acima60.toFixed(2),r.fora.toFixed(2),r.score,r.level]);
+  const csv=[header,...lines].map(row=>row.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="radar_pessoas_setores.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.querySelectorAll(".nav button").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    btn.classList.add("active");
+    $(btn.dataset.view).classList.add("active");
+    setTimeout(()=>Object.values(charts).forEach(c=>c.resize()),80);
+  });
+});
+
+function loadData(){
+  $("status").style.display="block";
+  $("status").textContent="Carregando CSV publicado do Google Sheets...";
+
+  Papa.parse(DATA_URL,{
+    download:true,
+    header:true,
+    skipEmptyLines:true,
+    complete:function(results){
+      try{
+        if(!results || !results.data || !results.data.length){
+          throw new Error("CSV retornou vazio.");
+        }
+
+        const normalized = normalizeRows(results.data);
+        rawData = cleanData(normalized);
+
+        if(!rawData.length){
+          console.log("Primeiras linhas recebidas:", results.data.slice(0,5));
+          throw new Error("CSV lido, mas nenhum registro válido foi encontrado. Verifique se a coluna REGISTRO aparece no CSV.");
+        }
+
+        $("status").textContent=`Base carregada com ${fmt(rawData.length)} registros.`;
+        setTimeout(()=>$("status").style.display="none",1600);
+
+        setupFilters();
+        render();
+
+      }catch(e){
+        $("status").style.display="block";
+        $("status").textContent="Erro ao preparar dados: " + e.message;
+        console.error(e);
+      }
+    },
+    error:function(err){
+      $("status").style.display="block";
+      $("status").textContent="Erro ao carregar dados: " + (err.message || "falha ao acessar o CSV publicado");
+      console.error(err);
+    }
+  });
+}
+
+loadData();
+</script>
+
+</body>
+</html>
