@@ -1,14 +1,24 @@
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzi36bCLqS3doiy4tXvaryAzYM_E6OzGM0a0X9PDDSsYaSDehQ0-KMliFXGOk0rgBCE/exec";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRE3Q_RdpZOqc4f3O3fQirMQkEXQWyBkiIIXB6LZWgqTZbItGBHAxUlf2-OkEcALDlUfyPeK7GyBQrB/pub?gid=1371643814&single=true&output=csv";
 
 let ROWS = [];
 let COL = {};
 
 const $ = id => document.getElementById(id);
+
 const clean = v => (v ?? "").toString().trim();
-const norm = v => clean(v).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+const norm = v => clean(v)
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .toUpperCase();
+
 const fmtInt = n => (+n || 0).toLocaleString("pt-BR");
-const fmtPct = n => (+n || 0).toLocaleString("pt-BR", {minimumFractionDigits:1, maximumFractionDigits:1}) + "%";
+
+const fmtPct = n => (+n || 0).toLocaleString("pt-BR", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1
+}) + "%";
 
 function showError(msg){
   const el = $("status");
@@ -23,13 +33,10 @@ function hideError(){
   if(el) el.style.display = "none";
 }
 
-function setLoading(isLoading){
-  const txt = isLoading ? "Carregando..." : "Todas";
+function setLoading(){
   ["fDir","fSupCoord","fSetor"].forEach(id => {
     const el = $(id);
-    if(el && isLoading){
-      el.innerHTML = `<option>${txt}</option>`;
-    }
+    if(el) el.innerHTML = `<option>Carregando...</option>`;
   });
 }
 
@@ -64,24 +71,24 @@ function numberFrom(v){
   return parseFloat(s) || 0;
 }
 
-function isAfastado(v){
-  const x = norm(v);
+function isAfastado(row){
+  const afast = norm(val(row, COL.afast));
+  const tipo = norm(val(row, COL.tipoAfastamento));
+  const codfreq = norm(val(row, COL.codfreq));
+
   return (
-    x.includes("AFAST") ||
-    x.includes("LICEN") ||
-    x.includes("INATIVO") ||
-    x.includes("CEDID") ||
-    x.includes("SUSP") ||
-    x.includes("FERIAS")
-  );
+    afast &&
+    !["ATIVO","NORMAL","TRABALHANDO",""].includes(afast)
+  ) || tipo || codfreq.includes("AFAST");
 }
 
 function isOperacional(row){
   const x = norm([
     val(row,COL.tipo),
     val(row,COL.tipoSetor),
-    val(row,COL.cargo),
-    val(row,COL.funcao)
+    val(row,COL.funcaoCargo),
+    val(row,COL.funcao),
+    val(row,COL.descricao)
   ].join(" "));
 
   return (
@@ -90,18 +97,14 @@ function isOperacional(row){
     x.includes("MOTOR") ||
     x.includes("FISCAL") ||
     x.includes("AGENTE") ||
-    x.includes("RODOVIARI")
+    x.includes("RODOVIARI") ||
+    x.includes("LIMP") ||
+    x.includes("COLETA")
   );
 }
 
 function supCoordVal(row){
-  const sup = val(row,COL.sup);
-  const coord = val(row,COL.coord);
-  const combo = val(row,COL.supCoord);
-
-  if(combo) return combo;
-  if(sup && coord && norm(sup) !== norm(coord)) return sup + " / " + coord;
-  return sup || coord || "";
+  return val(row,COL.sup) || "Não informado";
 }
 
 function groupBy(arr, fn){
@@ -117,8 +120,9 @@ function fillSelect(id, values, allLabel){
   if(!el) return;
 
   const current = el.value;
+
   const list = [...new Set(values.filter(Boolean))]
-    .sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    .sort((a,b) => a.localeCompare(b,"pt-BR"));
 
   el.innerHTML =
     `<option value="">${allLabel}</option>` +
@@ -140,7 +144,7 @@ function filteredRows(){
 
 function populateFilters(){
   fillSelect("fDir", ROWS.map(r => val(r,COL.dir)), "Todas as Diretorias");
-  fillSelect("fSupCoord", ROWS.map(r => supCoordVal(r)), "Todas");
+  fillSelect("fSupCoord", ROWS.map(r => supCoordVal(r)), "Todas as Superintendências");
   fillSelect("fSetor", ROWS.map(r => val(r,COL.setor)), "Todos os Setores");
   fillSelect("fRef", ROWS.map(r => val(r,COL.ref)), "Todas");
 }
@@ -149,14 +153,12 @@ function render(){
   const data = filteredRows();
   const total = data.length;
 
-  const afastados = data.filter(r => isAfastado(val(r,COL.afast))).length;
+  const afastados = data.filter(isAfastado).length;
   const ativos = total - afastados;
 
-  const idades = data
-    .map(r => numberFrom(val(r,COL.idade)))
-    .filter(n => n > 0);
-
+  const idades = data.map(r => numberFrom(val(r,COL.idade))).filter(n => n > 0);
   const acima55 = idades.filter(n => n >= 55).length;
+
   const operacionais = data.filter(isOperacional).length;
   const administrativos = total - operacionais;
 
@@ -172,7 +174,7 @@ function render(){
 
   if($("nAtivos")) $("nAtivos").textContent = fmtPct(pctAtivos) + " disponíveis";
   if($("nAfast")) $("nAfast").textContent = fmtPct(pctAfast) + " do total";
-  if($("nRisco")) $("nRisco").textContent = idades.length ? fmtInt(acima55) + " servidores acima de 55 anos" : "coluna de idade não localizada";
+  if($("nRisco")) $("nRisco").textContent = idades.length ? fmtInt(acima55) + " empregados acima de 55 anos" : "coluna de idade não localizada";
 
   if($("opQtd")) $("opQtd").textContent = fmtInt(operacionais);
   if($("admQtd")) $("admQtd").textContent = fmtInt(administrativos);
@@ -197,8 +199,8 @@ function renderDirBars(data,total){
   if(!el) return;
 
   const rows = Object.entries(groupBy(data, r => val(r,COL.dir)))
-    .map(([k,v])=>[k,v.length])
-    .sort((a,b)=>b[1]-a[1])
+    .map(([k,v]) => [k,v.length])
+    .sort((a,b) => b[1] - a[1])
     .slice(0,6);
 
   const max = rows[0]?.[1] || 1;
@@ -206,7 +208,9 @@ function renderDirBars(data,total){
   el.innerHTML = rows.map(([k,v]) => `
     <div class="barRow">
       <span title="${k}">${k}</span>
-      <div class="track"><div class="fill" style="width:${v/max*100}%"></div></div>
+      <div class="track">
+        <div class="fill" style="width:${v/max*100}%"></div>
+      </div>
       <b class="num">${fmtInt(v)}</b>
       <span class="pct">${fmtPct(total ? v/total*100 : 0)}</span>
     </div>
@@ -219,10 +223,11 @@ function renderActivityCols(data){
 
   const rows = Object.entries(groupBy(data, r => val(r,COL.dir)))
     .map(([k,v]) => {
-      const afast = v.filter(r => isAfastado(val(r,COL.afast))).length;
-      return [k,v.length, v.length ? (v.length-afast)/v.length*100 : 0];
+      const afast = v.filter(isAfastado).length;
+      const pct = v.length ? (v.length - afast) / v.length * 100 : 0;
+      return [k,v.length,pct];
     })
-    .sort((a,b)=>b[1]-a[1])
+    .sort((a,b) => b[1] - a[1])
     .slice(0,6);
 
   el.innerHTML = rows.map(([k,_,p]) => `
@@ -244,20 +249,23 @@ function renderAlerts(total,pctAfast,pctRisco,pctOperacional){
       <b>${fmtPct(pctAfast)}</b>
       <span>afastamento geral no filtro atual</span>
     </div>
+
     <div class="alert red">
-      <small>Renovação</small>
+      <small>Risco de reposição</small>
       <b>${pctRisco ? fmtPct(pctRisco) : "N/D"}</b>
-      <span>do quadro acima de 55 anos</span>
+      <span>quadro acima de 55 anos</span>
     </div>
+
     <div class="alert green">
-      <small>Estrutura</small>
+      <small>Estrutura funcional</small>
       <b>${fmtPct(pctOperacional)}</b>
       <span>concentração operacional</span>
     </div>
+
     <div class="alert">
       <small>Base filtrada</small>
       <b>${fmtInt(total)}</b>
-      <span>servidores no recorte selecionado</span>
+      <span>empregados no recorte selecionado</span>
     </div>
   `;
 }
@@ -268,13 +276,13 @@ function renderRanking(data){
 
   const rows = Object.entries(groupBy(data, r => val(r,COL.dir)))
     .map(([k,v]) => {
-      const afast = v.filter(r => isAfastado(val(r,COL.afast))).length;
+      const afast = v.filter(isAfastado).length;
       const ativos = v.length - afast;
       const pct = v.length ? ativos / v.length * 100 : 0;
       return [k,v.length,ativos,afast,pct];
     })
-    .filter(x=>x[1]>=5)
-    .sort((a,b)=>a[4]-b[4])
+    .filter(x => x[1] >= 5)
+    .sort((a,b) => a[4] - b[4])
     .slice(0,5);
 
   el.innerHTML = rows.map(([k,total,ativos,afast,pct]) => `
@@ -290,89 +298,166 @@ function renderRanking(data){
   `).join("") || `<div class="hint">Sem ranking disponível.</div>`;
 }
 
-async function fetchWithFallback(url){
-  const directUrl = url + (url.includes("?") ? "&" : "?") + "t=" + Date.now();
+function parseCSV(text){
+  const lines = text.replace(/\r/g,"").split("\n").filter(l => l.trim() !== "");
+  const headers = splitCSVLine(lines[0]).map(h => h.trim());
 
-  try{
-    const res = await fetch(directUrl, { cache:"no-store", mode:"cors" });
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    return await res.json();
-  }catch(e){
-    throw new Error("Falha ao acessar o Apps Script. Verifique se o deploy está como Web App, execução como você e acesso como Qualquer pessoa.");
+  return lines.slice(1).map(line => {
+    const values = splitCSVLine(line);
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = values[i] ?? "");
+    return obj;
+  });
+}
+
+function splitCSVLine(line){
+  const result = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for(let i = 0; i < line.length; i++){
+    const char = line[i];
+    const next = line[i + 1];
+
+    if(char === '"' && insideQuotes && next === '"'){
+      current += '"';
+      i++;
+    } else if(char === '"'){
+      insideQuotes = !insideQuotes;
+    } else if(char === "," && !insideQuotes){
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
   }
+
+  result.push(current);
+  return result;
 }
 
 async function loadData(){
   try{
     hideError();
-    setLoading(true);
+    setLoading();
 
     if($("updated")){
       $("updated").textContent = "Atualizado em: carregando...";
     }
 
-    if(!API_URL || !API_URL.includes("/exec")){
-      throw new Error("URL do Apps Script inválida. Ela precisa terminar com /exec.");
+    const url = CSV_URL + "&cachebuster=" + Date.now();
+
+    const res = await fetch(url, {
+      cache: "no-store"
+    });
+
+    if(!res.ok){
+      throw new Error("HTTP " + res.status);
     }
 
-    const json = await fetchWithFallback(API_URL);
+    const csvText = await res.text();
 
-    const rows =
-      Array.isArray(json) ? json :
-      Array.isArray(json.rows) ? json.rows :
-      Array.isArray(json.data) ? json.data :
-      [];
+    if(!csvText || csvText.length < 20){
+      throw new Error("CSV vazio ou inválido.");
+    }
+
+    const rows = parseCSV(csvText);
 
     if(!rows.length){
-      throw new Error("A API respondeu, mas não retornou dados. Esperado: rows[] ou data[].");
+      throw new Error("Nenhuma linha encontrada no CSV.");
     }
 
     ROWS = rows.filter(row => Object.values(row).some(v => clean(v)));
 
-    if(!ROWS.length){
-      throw new Error("Base retornada vazia.");
-    }
-
     const headers = Object.keys(ROWS[0]);
 
     COL = {
-      dir: pick(headers,["DIRETORIA","DIR","DIRETORIA_ATUAL"]),
-      supCoord: pick(headers,["SUPERINTENDÊNCIA / COORDENAÇÃO","SUPERINTENDENCIA / COORDENACAO","SUPERINTENDENCIA_COORDENACAO","SUPER_COORD"]),
-      sup: pick(headers,["SUPERINTENDÊNCIA","SUPERINTENDENCIA","SUPER","SUPERINT"]),
-      coord: pick(headers,["COORDENAÇÃO","COORDENACAO","COORD","COORDENADORIA"]),
-      setor: pick(headers,["SETOR","UNIDADE","LOTAÇÃO","LOTACAO","ÓRGÃO","ORGAO"]),
-      ref: pick(headers,["REFERÊNCIA","REFERENCIA","MÊS","MES","COMPETÊNCIA","COMPETENCIA","DATA_REF"]),
-      afast: pick(headers,["AFASTAMENTO","SITUAÇÃO","SITUACAO","STATUS","SITUAÇÃO FUNCIONAL","SITUACAO FUNCIONAL","ATIVO_AFASTADO"]),
-      tipo: pick(headers,["TIPOCARGO","TIPO CARGO","TIPO DE CARGO","CLASSIFICAÇÃO CARGO","CLASSIFICACAO CARGO"]),
-      tipoSetor: pick(headers,["TIPOSETOR","TIPO SETOR"]),
-      cargo: pick(headers,["CARGO","CARGO_ATUAL"]),
-      funcao: pick(headers,["FUNÇÃO","FUNCAO","FUNCAO_ATUAL"]),
-      idade: pick(headers,["IDADE","IDADE_ATUAL","IDADE_SERVIDOR"]),
-      dtAtualizacao: pick(headers,["DATA_ATUALIZACAO","DT_ATUALIZACAO","ATUALIZADO_EM","DATA BASE","DATA_BASE"])
+      coddir: pick(headers,["CODDIR"]),
+      dir: pick(headers,["DIRETORIA"]),
+      sup: pick(headers,["SUPERINTENDÊNCIA","SUPERINTENDENCIA"]),
+      setor: pick(headers,["SETOR"]),
+      registro: pick(headers,["REGISTRO"]),
+      nome: pick(headers,["NOME"]),
+      sexo: pick(headers,["SEXO"]),
+      codCargo: pick(headers,["CÓDCARGO","CODCARGO"]),
+      funcaoCargo: pick(headers,["FUNCAOCARGO"]),
+      ref: pick(headers,["REFERENCIA","REFERÊNCIA"]),
+      admissao: pick(headers,["ADMISSÃO","ADMISSAO"]),
+      nascimento: pick(headers,["NASCIMENTO"]),
+      funcao: pick(headers,["FUNCAO","FUNÇÃO"]),
+      funcaoEc: pick(headers,["FUNCAO_EC"]),
+      categoriaEc: pick(headers,["CATEGORIA_EC"]),
+      codfreq: pick(headers,["CODFREQ"]),
+      afast: pick(headers,["AFASTAMENTO"]),
+      dtini: pick(headers,["DTINI"]),
+      dtfim: pick(headers,["DTFIM"]),
+      mnemonico: pick(headers,["MNEMONICO"]),
+      tipoAfastamento: pick(headers,["TIPOAFASTAMENTO"]),
+      vinculo: pick(headers,["VINCULO","VÍNCULO"]),
+      centroCusto: pick(headers,["CENTROCUSTO"]),
+      tipoCentroCusto: pick(headers,["TIPOCENTROCUSTO"]),
+      paiSetor: pick(headers,["PAISETOR"]),
+      descricao: pick(headers,["DESCRIÇÃO","DESCRICAO"]),
+      logradouro: pick(headers,["LOGRADOURO"]),
+      bairro: pick(headers,["BAIRRO"]),
+      cep: pick(headers,["CEP"]),
+      tipo: pick(headers,["TIPOCARGO"]),
+      setorAnterior: pick(headers,["SETOR_ANTERIOR_GGQ02"]),
+      escolaridade: pick(headers,["ESCOLARIDADE"]),
+      endereco: pick(headers,["ENDEREÇO","ENDERECO"]),
+      bairroEnder: pick(headers,["BAIRROENDER"]),
+      cidadeEnder: pick(headers,["CIDADEENDER"]),
+      cepEnder: pick(headers,["CEPENDER"]),
+      estadoCivil: pick(headers,["ESTCIVIL"]),
+      cbo: pick(headers,["CBO"]),
+      regimeJur: pick(headers,["REGIMEJUR"]),
+      idade: pick(headers,["IDADEANOS"]),
+      idadeMeses: pick(headers,["IDADEMESES"]),
+      idadeDias: pick(headers,["IDADEDIAS"]),
+      raca: pick(headers,["RACA","RAÇA"]),
+      tempoCasaAnos: pick(headers,["TPCASAANOS"]),
+      tempoCasaMeses: pick(headers,["TPCASAMESES"]),
+      tempoCasaDias: pick(headers,["TPCASADIAS"]),
+      defFisica: pick(headers,["DEF_FÍSICA","DEF_FISICA"]),
+      defVisual: pick(headers,["DEF_VISUAL"]),
+      defAuditiva: pick(headers,["DEF_AUDITIVA"]),
+      defMental: pick(headers,["DEF_MENTAL"]),
+      defIntelectual: pick(headers,["DEF_INTELECTUAL"]),
+      defReabilitado: pick(headers,["DEF_REABILITADO"]),
+      defCota: pick(headers,["DEF_COTA"]),
+      filhoPcd: pick(headers,["POSSUI_FILHO_PCD"]),
+      sindicato: pick(headers,["SINDICATO"]),
+      percInsal: pick(headers,["PERCINSAL"]),
+      jornadaEntrada: pick(headers,["JORNADA_ENTRADA"]),
+      jornadaSaida: pick(headers,["JORNADA_SAÍDA","JORNADA_SAIDA"]),
+      jornadaSaidaIntervalo: pick(headers,["JORNADA_SAÍDA_INTERVALO","JORNADA_SAIDA_INTERVALO"]),
+      jornadaRetornoIntervalo: pick(headers,["JORNADA_RETORNO_INTERVALO"]),
+      jornada: pick(headers,["JORNADA"]),
+      tipoSetor: pick(headers,["TIPOSETOR"])
     };
 
     if(!COL.dir){
-      throw new Error("Coluna de DIRETORIA não localizada na base.");
+      throw new Error("Coluna DIRETORIA não localizada.");
+    }
+
+    if(!COL.setor){
+      throw new Error("Coluna SETOR não localizada.");
     }
 
     populateFilters();
     render();
 
     if($("updated")){
-      const dt =
-        COL.dtAtualizacao ? val(ROWS[0],COL.dtAtualizacao) :
-        new Date().toLocaleString("pt-BR");
-
-      $("updated").textContent = "Atualizado em: " + dt;
+      $("updated").textContent = "Atualizado em: " + new Date().toLocaleString("pt-BR");
     }
 
   }catch(err){
     console.error(err);
 
     showError(
-      "Não foi possível carregar os dados. " +
-      err.message +
-      " | Confirme: Apps Script publicado como Web App, acesso 'Qualquer pessoa' e URL terminando em /exec."
+      "Não foi possível carregar os dados via CSV publicado. " +
+      "Verifique se a planilha está publicada na Web, se a aba correta está no link e se a URL termina com output=csv. " +
+      "Erro: " + err.message
     );
 
     if($("updated")){
