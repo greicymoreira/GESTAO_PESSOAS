@@ -196,7 +196,7 @@ h2{margin:0;font-size:18px}
 </div>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRE3Q_RdpZOqc4f3O3fQirMQkEXQWyBkiIIXB6LZWgqTZbItGBHAxUlf2-OkEcALDlUfyPeK7GyBQrB/pub?gid=1371643814&single=true&output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRE3Q_RdpZOqc4f3O3fQirMQkEXQWyBkiIlXB6LZWgqTZbItGBHAxUHf2-0kEcALDIUfyPeK7GyBQrB/pub?gid=1371643814&single=true&output=csv";
 
 let ROWS = [];
 let COL = {};
@@ -270,7 +270,7 @@ function isAfastado(row){
   const codfreq=norm(val(row,COL.codfreq));
   if(!afast && !tipo && !codfreq) return false;
   if(["ATIVO","NORMAL","TRABALHANDO"].includes(afast)) return false;
-  return afast || tipo || codfreq;
+  return !!(afast || tipo || codfreq);
 }
 
 function isOperacional(row){
