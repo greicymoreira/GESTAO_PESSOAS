@@ -14,31 +14,54 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,sans-serif}
 .app{max-width:1800px;margin:0 auto;padding:28px}
-.header{padding:26px;border:1px solid var(--line);border-radius:22px;background:#0a1b31}
+
+.header{
+  display:flex;
+  align-items:center;
+  gap:28px;
+  padding:26px;
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:#0a1b31;
+}
+.logo{
+  width:250px;
+  max-height:70px;
+  object-fit:contain;
+  padding-right:26px;
+  border-right:1px solid rgba(255,255,255,.28);
+}
+.titleBox{flex:1}
 .eyebrow{font-size:12px;font-weight:900;letter-spacing:.25em;color:#b8d4f2}
 h1{margin:6px 0;font-size:38px}
 .sub{color:#c7d8ee}
+
 .status{display:none;margin:14px 0;padding:13px;border:1px solid var(--orange);border-radius:14px;background:#1b2130;color:#ffd4b8}
-.filters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0}
 .field{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
 label{display:block;font-size:10px;font-weight:900;letter-spacing:.18em;color:#b8d4f2;margin-bottom:8px}
 select{width:100%;background:transparent;color:#fff;border:0;font-weight:800;font-size:15px}
 option{background:#0d1f36}
+
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;min-height:120px}
 .kpi .label{font-size:11px;letter-spacing:.16em;color:#b8d4f2;font-weight:900;text-transform:uppercase}
 .kpi .value{font-size:34px;font-weight:950;margin:14px 0 4px}
 .kpi .note{color:#c7d8ee;font-size:13px}
+
 .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:20px;min-height:320px;overflow:hidden}
 .panelHead{padding:18px;border-bottom:1px solid var(--line)}
 h2{margin:0;font-size:18px}
 .hint{color:#c7d8ee;font-size:13px;margin-top:5px}
 .body{padding:18px}
+
 .barRow{display:grid;grid-template-columns:120px 1fr 70px 55px;gap:10px;align-items:center;margin-bottom:12px}
 .track{height:22px;background:#132941;border-radius:4px;overflow:hidden}
 .fill{height:100%;background:linear-gradient(90deg,#2f67a5,#5b9bd5)}
 .num,.pct{text-align:right;font-weight:800}
+
 .donutRow{display:grid;grid-template-columns:190px 1fr;gap:22px;align-items:center}
 .donut{width:180px;height:180px;border-radius:50%;background:conic-gradient(var(--blue) 0 var(--opPct),var(--orange) var(--opPct) 100%);position:relative}
 .donut:after{content:"";position:absolute;inset:52px;border-radius:50%;background:var(--panel)}
@@ -46,14 +69,16 @@ h2{margin:0;font-size:18px}
 .legendItem{display:grid;grid-template-columns:12px 1fr auto;gap:10px;margin-bottom:18px;align-items:center}
 .dot{width:12px;height:12px;border-radius:50%;background:var(--blue)}
 .dot.orange{background:var(--orange)}
+
 .cols{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;height:210px;align-items:end}
 .colWrap{text-align:center;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:8px}
 .col{height:var(--h);min-height:32px;background:linear-gradient(180deg,#4b86bd,#1f5791)}
 .colVal{font-weight:900;color:#80d199}
 .colVal.warn{color:#ffa02b}
 .colLbl{font-size:12px;color:#d9e6f8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 .bottom{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:14px}
-.alerts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.alerts{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .alert{background:#132840;border-radius:16px;padding:14px;border-left:4px solid var(--blue)}
 .alert.orange{border-left-color:var(--orange)}
 .alert.red{border-left-color:var(--red)}
@@ -61,12 +86,26 @@ h2{margin:0;font-size:18px}
 .alert small{display:block;color:#a8bdd5;font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
 .alert b{display:block;font-size:22px;margin:8px 0}
 .alert span{color:#c7d8ee;font-size:12px}
+
 .rank{display:grid;grid-template-columns:1fr auto;gap:12px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.08)}
 .rank small{display:block;color:#aebfd5;margin-top:4px}
 .statusPill{border:1px solid #345978;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}
 .ok{color:#83d99d}.att{color:#ffa02b}.crit{color:#ff7d72}
 .footer{margin-top:16px;color:#aebfd5;font-size:13px}
-@media(max-width:1100px){.filters,.kpis,.grid,.bottom,.alerts{grid-template-columns:1fr}}
+
+@media(max-width:1100px){
+  .filters{grid-template-columns:1fr}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .grid,.bottom{grid-template-columns:1fr}
+  .alerts{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:720px){
+  .app{padding:14px}
+  .header{flex-direction:column;align-items:flex-start}
+  .logo{width:220px;border-right:0;padding-right:0}
+  .kpis,.alerts{grid-template-columns:1fr}
+  h1{font-size:32px}
+}
 </style>
 </head>
 
@@ -74,9 +113,12 @@ h2{margin:0;font-size:18px}
 <div class="app">
 
 <header class="header">
-  <div class="eyebrow">COMLURB · GESTÃO DE PESSOAS</div>
-  <h1>Perfil Funcional</h1>
-  <div class="sub">Leitura executiva da força de trabalho, disponibilidade operacional e risco de reposição</div>
+  <img class="logo" src="RIOPREFEITURA%20Comlurb%20horizontal%20monocromatica%20branco.png" alt="Prefeitura do Rio / COMLURB">
+  <div class="titleBox">
+    <div class="eyebrow">COMLURB · GESTÃO DE PESSOAS</div>
+    <h1>Perfil Funcional</h1>
+    <div class="sub">Leitura executiva da força de trabalho, disponibilidade operacional e risco de reposição</div>
+  </div>
 </header>
 
 <div id="status" class="status"></div>
@@ -95,11 +137,6 @@ h2{margin:0;font-size:18px}
   <div class="field">
     <label>Setor</label>
     <select id="fSetor"><option>Carregando...</option></select>
-  </div>
-
-  <div class="field">
-    <label>Referência</label>
-    <select id="fRef"><option>Todas</option></select>
   </div>
 </section>
 
@@ -125,13 +162,13 @@ h2{margin:0;font-size:18px}
   <div class="kpi">
     <div class="label">Risco de reposição</div>
     <div id="kRisco" class="value">0%</div>
-    <div id="nRisco" class="note">acima de 55 anos</div>
+    <div id="nRisco" class="note">65 anos ou mais</div>
   </div>
 
   <div class="kpi">
-    <div class="label">Operacionais</div>
-    <div id="opQtd" class="value">0</div>
-    <div class="note">estrutura funcional</div>
+    <div class="label">Laudos / Restrições</div>
+    <div id="kLaudos" class="value">—</div>
+    <div class="note">em implantação</div>
   </div>
 </section>
 
@@ -154,7 +191,7 @@ h2{margin:0;font-size:18px}
         <div id="donutPct" class="donutCenter">0%</div>
       </div>
       <div>
-        <div class="legendItem"><span class="dot"></span><span>Operacional</span><b id="opQtd2">0</b></div>
+        <div class="legendItem"><span class="dot"></span><span>Operacional</span><b id="opQtd">0</b></div>
         <div class="legendItem"><span class="dot orange"></span><span>Administrativo</span><b id="admQtd">0</b></div>
       </div>
     </div>
@@ -284,7 +321,7 @@ function isOperacional(row){
   return x.includes("OPER") || x.includes("GARI") || x.includes("MOTOR") || x.includes("FISCAL") || x.includes("AGENTE") || x.includes("LIMP") || x.includes("COLETA");
 }
 
-function supCoordVal(row){
+function supVal(row){
   return val(row,COL.sup) || "Não informado";
 }
 
@@ -299,26 +336,55 @@ function groupBy(arr,fn){
 function fillSelect(id,values,label){
   const el=$(id);
   if(!el) return;
+
   const current=el.value;
   const list=[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+
   el.innerHTML=`<option value="">${label}</option>` + list.map(v=>`<option value="${String(v).replaceAll('"','&quot;')}">${v}</option>`).join("");
-  if([...el.options].some(o=>o.value===current)) el.value=current;
+
+  if([...el.options].some(o=>o.value===current)){
+    el.value=current;
+  }else{
+    el.value="";
+  }
+}
+
+function rowsForFilterLevel(level){
+  const dir = $("fDir")?.value || "";
+  const sup = $("fSupCoord")?.value || "";
+
+  return ROWS.filter(row => {
+    if(level >= 1 && dir && val(row,COL.dir) !== dir) return false;
+    if(level >= 2 && sup && supVal(row) !== sup) return false;
+    return true;
+  });
+}
+
+function updateFilters(changedId){
+  if(changedId === "fDir"){
+    $("fSupCoord").value = "";
+    $("fSetor").value = "";
+  }
+
+  if(changedId === "fSupCoord"){
+    $("fSetor").value = "";
+  }
+
+  fillSelect("fDir", ROWS.map(r=>val(r,COL.dir)), "Todas as Diretorias");
+
+  const rowsSup = rowsForFilterLevel(1);
+  fillSelect("fSupCoord", rowsSup.map(r=>supVal(r)), "Todas as Superintendências");
+
+  const rowsSetor = rowsForFilterLevel(2);
+  fillSelect("fSetor", rowsSetor.map(r=>val(r,COL.setor)), "Todos os Setores");
 }
 
 function filteredRows(){
   return ROWS.filter(row =>
     (!$("fDir")?.value || val(row,COL.dir)===$("fDir").value) &&
-    (!$("fSupCoord")?.value || supCoordVal(row)===$("fSupCoord").value) &&
-    (!$("fSetor")?.value || val(row,COL.setor)===$("fSetor").value) &&
-    (!$("fRef")?.value || val(row,COL.ref)===$("fRef").value)
+    (!$("fSupCoord")?.value || supVal(row)===$("fSupCoord").value) &&
+    (!$("fSetor")?.value || val(row,COL.setor)===$("fSetor").value)
   );
-}
-
-function populateFilters(){
-  fillSelect("fDir",ROWS.map(r=>val(r,COL.dir)),"Todas as Diretorias");
-  fillSelect("fSupCoord",ROWS.map(r=>supCoordVal(r)),"Todas as Superintendências");
-  fillSelect("fSetor",ROWS.map(r=>val(r,COL.setor)),"Todos os Setores");
-  fillSelect("fRef",ROWS.map(r=>val(r,COL.ref)),"Todas");
 }
 
 function render(){
@@ -328,12 +394,13 @@ function render(){
   const ativos=total-afastados;
   const operacionais=data.filter(isOperacional).length;
   const administrativos=total-operacionais;
+
   const idades=data.map(r=>numberFrom(val(r,COL.idade))).filter(n=>n>0);
-  const acima55=idades.filter(n=>n>=55).length;
+  const acima65=idades.filter(n=>n>=65).length;
 
   const pctAtivos=total?ativos/total*100:0;
   const pctAfast=total?afastados/total*100:0;
-  const pctRisco=idades.length?acima55/idades.length*100:0;
+  const pctRisco=idades.length?acima65/idades.length*100:0;
   const pctOper=total?operacionais/total*100:0;
 
   if($("kTotal")) $("kTotal").textContent=fmtInt(total);
@@ -343,10 +410,9 @@ function render(){
 
   if($("nAtivos")) $("nAtivos").textContent=fmtPct(pctAtivos)+" disponíveis";
   if($("nAfast")) $("nAfast").textContent=fmtPct(pctAfast)+" do total";
-  if($("nRisco")) $("nRisco").textContent=idades.length?fmtInt(acima55)+" empregados acima de 55 anos":"idade não localizada";
+  if($("nRisco")) $("nRisco").textContent=idades.length?fmtInt(acima65)+" empregados com 65 anos ou mais":"idade não localizada";
 
   if($("opQtd")) $("opQtd").textContent=fmtInt(operacionais);
-  if($("opQtd2")) $("opQtd2").textContent=fmtInt(operacionais);
   if($("admQtd")) $("admQtd").textContent=fmtInt(administrativos);
   if($("donutPct")) $("donutPct").textContent=fmtPct(pctOper);
   if($("donut")) $("donut").style.setProperty("--opPct",pctOper+"%");
@@ -362,6 +428,7 @@ function renderDirBars(data,total){
   const el=$("dirBars"); if(!el) return;
   const rows=Object.entries(groupBy(data,r=>val(r,COL.dir))).map(([k,v])=>[k,v.length]).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const max=rows[0]?.[1] || 1;
+
   el.innerHTML=rows.map(([k,v])=>`
     <div class="barRow">
       <span title="${k}">${k}</span>
@@ -393,8 +460,9 @@ function renderAlerts(total,pctAfast,pctRisco,pctOper){
   const el=$("alerts"); if(!el) return;
   el.innerHTML=`
     <div class="alert orange"><small>Pressão operacional</small><b>${fmtPct(pctAfast)}</b><span>afastamento geral no filtro atual</span></div>
-    <div class="alert red"><small>Risco de reposição</small><b>${pctRisco?fmtPct(pctRisco):"N/D"}</b><span>quadro acima de 55 anos</span></div>
+    <div class="alert red"><small>Risco de reposição</small><b>${pctRisco?fmtPct(pctRisco):"N/D"}</b><span>quadro com 65 anos ou mais</span></div>
     <div class="alert green"><small>Estrutura funcional</small><b>${fmtPct(pctOper)}</b><span>concentração operacional</span></div>
+    <div class="alert"><small>Laudos / Restrições</small><b>—</b><span>em implantação</span></div>
     <div class="alert"><small>Base filtrada</small><b>${fmtInt(total)}</b><span>empregados no recorte selecionado</span></div>
   `;
 }
@@ -419,6 +487,7 @@ function renderRanking(data){
 async function loadData(){
   try{
     hideError();
+
     const res=await fetch(CSV_URL+"&cachebuster="+Date.now(),{cache:"no-store"});
     if(!res.ok) throw new Error("HTTP "+res.status);
 
@@ -437,9 +506,7 @@ async function loadData(){
       sup:pick(headers,["SUPERINTENDÊNCIA","SUPERINTENDENCIA"]),
       setor:pick(headers,["SETOR"]),
       registro:pick(headers,["REGISTRO"]),
-      nome:pick(headers,["NOME"]),
       sexo:pick(headers,["SEXO"]),
-      codCargo:pick(headers,["CÓDCARGO","CODCARGO"]),
       funcaoCargo:pick(headers,["FUNCAOCARGO"]),
       ref:pick(headers,["REFERENCIA","REFERÊNCIA"]),
       admissao:pick(headers,["ADMISSÃO","ADMISSAO"]),
@@ -449,7 +516,6 @@ async function loadData(){
       afast:pick(headers,["AFASTAMENTO"]),
       tipoAfastamento:pick(headers,["TIPOAFASTAMENTO"]),
       descricao:pick(headers,["DESCRIÇÃO","DESCRICAO"]),
-      bairro:pick(headers,["BAIRRO"]),
       tipo:pick(headers,["TIPOCARGO"]),
       escolaridade:pick(headers,["ESCOLARIDADE"]),
       bairroEnder:pick(headers,["BAIRROENDER"]),
@@ -463,7 +529,7 @@ async function loadData(){
     if(!COL.dir) throw new Error("Coluna DIRETORIA não localizada.");
     if(!COL.setor) throw new Error("Coluna SETOR não localizada.");
 
-    populateFilters();
+    updateFilters("");
     render();
 
     if($("updated")) $("updated").textContent="Atualizado em: "+new Date().toLocaleString("pt-BR");
@@ -474,9 +540,12 @@ async function loadData(){
   }
 }
 
-["fDir","fSupCoord","fSetor","fRef"].forEach(id=>{
+["fDir","fSupCoord","fSetor"].forEach(id=>{
   document.addEventListener("change",e=>{
-    if(e.target && e.target.id===id) render();
+    if(e.target && e.target.id===id){
+      updateFilters(id);
+      render();
+    }
   });
 });
 
