@@ -1,11 +1,14 @@
 <script>
+
+// ================= CONFIG =================
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRE3Q_RdpZOqc4f3O3fQirMQkEXQWyBkiIIXB6LZWgqTZbItGBHAxUlf2-OkEcALDlUfyPeK7GyBQrB/pub?gid=1371643814&single=true&output=csv";
 
+// ================= VARS =================
 let ROWS = [];
 let COL = {};
 
+// ================= UTILS =================
 const $ = id => document.getElementById(id);
-
 const clean = v => (v ?? "").toString().trim();
 
 const norm = v => clean(v)
@@ -14,310 +17,17 @@ const norm = v => clean(v)
   .toUpperCase();
 
 const fmtInt = n => (+n || 0).toLocaleString("pt-BR");
+const fmtPct = n => (+n || 0).toLocaleString("pt-BR",{minimumFractionDigits:1}) + "%";
 
-const fmtPct = n => (+n || 0).toLocaleString("pt-BR", {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1
-}) + "%";
-
-function showError(msg){
-  const el = $("status");
-  if(el){
-    el.style.display = "block";
-    el.textContent = msg;
-  }
-}
-
-function hideError(){
-  const el = $("status");
-  if(el) el.style.display = "none";
-}
-
-function setLoading(){
-  ["fDir","fSupCoord","fSetor"].forEach(id => {
-    const el = $(id);
-    if(el) el.innerHTML = `<option>Carregando...</option>`;
-  });
-}
-
-function pick(headers, candidates){
-  const normalized = headers.map(norm);
-
-  for(const c of candidates){
-    const i = normalized.findIndex(h => h === norm(c));
-    if(i >= 0) return headers[i];
-  }
-
-  for(const c of candidates){
-    const nc = norm(c);
-    const i = normalized.findIndex(h => h.includes(nc) || nc.includes(h));
-    if(i >= 0) return headers[i];
-  }
-
-  return null;
-}
-
-function val(row, col){
-  return col ? clean(row[col]) : "";
-}
-
-function numberFrom(v){
-  let s = clean(v).replace(/[^0-9,.-]/g, "");
-  if(s.includes(",") && s.includes(".")){
-    s = s.replace(/\./g, "").replace(",", ".");
-  } else {
-    s = s.replace(",", ".");
-  }
-  return parseFloat(s) || 0;
-}
-
-function isAfastado(row){
-  const afast = norm(val(row, COL.afast));
-  const tipo = norm(val(row, COL.tipoAfastamento));
-  const codfreq = norm(val(row, COL.codfreq));
-
-  return (
-    afast &&
-    !["ATIVO","NORMAL","TRABALHANDO",""].includes(afast)
-  ) || tipo || codfreq.includes("AFAST");
-}
-
-function isOperacional(row){
-  const x = norm([
-    val(row,COL.tipo),
-    val(row,COL.tipoSetor),
-    val(row,COL.funcaoCargo),
-    val(row,COL.funcao),
-    val(row,COL.descricao)
-  ].join(" "));
-
-  return (
-    x.includes("OPER") ||
-    x.includes("GARI") ||
-    x.includes("MOTOR") ||
-    x.includes("FISCAL") ||
-    x.includes("AGENTE") ||
-    x.includes("RODOVIARI") ||
-    x.includes("LIMP") ||
-    x.includes("COLETA")
-  );
-}
-
-function supCoordVal(row){
-  return val(row,COL.sup) || "Não informado";
-}
-
-function groupBy(arr, fn){
-  return arr.reduce((acc,row) => {
-    const key = fn(row) || "Não informado";
-    (acc[key] ||= []).push(row);
-    return acc;
-  }, {});
-}
-
-function fillSelect(id, values, allLabel){
-  const el = $(id);
-  if(!el) return;
-
-  const current = el.value;
-
-  const list = [...new Set(values.filter(Boolean))]
-    .sort((a,b) => a.localeCompare(b,"pt-BR"));
-
-  el.innerHTML =
-    `<option value="">${allLabel}</option>` +
-    list.map(v => `<option value="${String(v).replaceAll('"','&quot;')}">${v}</option>`).join("");
-
-  if([...el.options].some(o => o.value === current)){
-    el.value = current;
-  }
-}
-
-function filteredRows(){
-  return ROWS.filter(row =>
-    (!$("fDir")?.value || val(row,COL.dir) === $("fDir").value) &&
-    (!$("fSupCoord")?.value || supCoordVal(row) === $("fSupCoord").value) &&
-    (!$("fSetor")?.value || val(row,COL.setor) === $("fSetor").value) &&
-    (!$("fRef")?.value || val(row,COL.ref) === $("fRef").value)
-  );
-}
-
-function populateFilters(){
-  fillSelect("fDir", ROWS.map(r => val(r,COL.dir)), "Todas as Diretorias");
-  fillSelect("fSupCoord", ROWS.map(r => supCoordVal(r)), "Todas as Superintendências");
-  fillSelect("fSetor", ROWS.map(r => val(r,COL.setor)), "Todos os Setores");
-  fillSelect("fRef", ROWS.map(r => val(r,COL.ref)), "Todas");
-}
-
-function render(){
-  const data = filteredRows();
-  const total = data.length;
-
-  const afastados = data.filter(isAfastado).length;
-  const ativos = total - afastados;
-
-  const idades = data.map(r => numberFrom(val(r,COL.idade))).filter(n => n > 0);
-  const acima55 = idades.filter(n => n >= 55).length;
-
-  const operacionais = data.filter(isOperacional).length;
-  const administrativos = total - operacionais;
-
-  const pctAtivos = total ? ativos / total * 100 : 0;
-  const pctAfast = total ? afastados / total * 100 : 0;
-  const pctRisco = idades.length ? acima55 / idades.length * 100 : 0;
-  const pctOperacional = total ? operacionais / total * 100 : 0;
-
-  if($("kTotal")) $("kTotal").textContent = fmtInt(total);
-  if($("kAtivos")) $("kAtivos").textContent = fmtInt(ativos);
-  if($("kAfast")) $("kAfast").textContent = fmtInt(afastados);
-  if($("kRisco")) $("kRisco").textContent = idades.length ? fmtPct(pctRisco) : "N/D";
-
-  if($("nAtivos")) $("nAtivos").textContent = fmtPct(pctAtivos) + " disponíveis";
-  if($("nAfast")) $("nAfast").textContent = fmtPct(pctAfast) + " do total";
-  if($("nRisco")) $("nRisco").textContent = idades.length ? fmtInt(acima55) + " empregados acima de 55 anos" : "coluna de idade não localizada";
-
-  if($("opQtd")) $("opQtd").textContent = fmtInt(operacionais);
-  if($("admQtd")) $("admQtd").textContent = fmtInt(administrativos);
-  if($("donutPct")) $("donutPct").textContent = fmtPct(pctOperacional);
-  if($("donut")) $("donut").style.setProperty("--opPct", pctOperacional + "%");
-
-  if($("compHint")){
-    $("compHint").textContent =
-      pctOperacional >= 60
-      ? "Predominância operacional coerente com a atividade-fim."
-      : "Estrutura com maior peso relativo administrativo.";
-  }
-
-  renderDirBars(data,total);
-  renderActivityCols(data);
-  renderAlerts(total,pctAfast,pctRisco,pctOperacional);
-  renderRanking(data);
-}
-
-function renderDirBars(data,total){
-  const el = $("dirBars");
-  if(!el) return;
-
-  const rows = Object.entries(groupBy(data, r => val(r,COL.dir)))
-    .map(([k,v]) => [k,v.length])
-    .sort((a,b) => b[1] - a[1])
-    .slice(0,6);
-
-  const max = rows[0]?.[1] || 1;
-
-  el.innerHTML = rows.map(([k,v]) => `
-    <div class="barRow">
-      <span title="${k}">${k}</span>
-      <div class="track">
-        <div class="fill" style="width:${v/max*100}%"></div>
-      </div>
-      <b class="num">${fmtInt(v)}</b>
-      <span class="pct">${fmtPct(total ? v/total*100 : 0)}</span>
-    </div>
-  `).join("") || `<div class="hint">Sem dados.</div>`;
-}
-
-function renderActivityCols(data){
-  const el = $("activityCols");
-  if(!el) return;
-
-  const rows = Object.entries(groupBy(data, r => val(r,COL.dir)))
-    .map(([k,v]) => {
-      const afast = v.filter(isAfastado).length;
-      const pct = v.length ? (v.length - afast) / v.length * 100 : 0;
-      return [k,v.length,pct];
-    })
-    .sort((a,b) => b[1] - a[1])
-    .slice(0,6);
-
-  el.innerHTML = rows.map(([k,_,p]) => `
-    <div class="colWrap">
-      <div class="colVal ${p < 80 ? "warn" : ""}">${fmtPct(p)}</div>
-      <div class="col" style="--h:${Math.max(18,p)}%"></div>
-      <div class="colLbl" title="${k}">${k}</div>
-    </div>
-  `).join("") || `<div class="hint">Sem dados.</div>`;
-}
-
-function renderAlerts(total,pctAfast,pctRisco,pctOperacional){
-  const el = $("alerts");
-  if(!el) return;
-
-  el.innerHTML = `
-    <div class="alert orange">
-      <small>Pressão operacional</small>
-      <b>${fmtPct(pctAfast)}</b>
-      <span>afastamento geral no filtro atual</span>
-    </div>
-
-    <div class="alert red">
-      <small>Risco de reposição</small>
-      <b>${pctRisco ? fmtPct(pctRisco) : "N/D"}</b>
-      <span>quadro acima de 55 anos</span>
-    </div>
-
-    <div class="alert green">
-      <small>Estrutura funcional</small>
-      <b>${fmtPct(pctOperacional)}</b>
-      <span>concentração operacional</span>
-    </div>
-
-    <div class="alert">
-      <small>Base filtrada</small>
-      <b>${fmtInt(total)}</b>
-      <span>empregados no recorte selecionado</span>
-    </div>
-  `;
-}
-
-function renderRanking(data){
-  const el = $("ranking");
-  if(!el) return;
-
-  const rows = Object.entries(groupBy(data, r => val(r,COL.dir)))
-    .map(([k,v]) => {
-      const afast = v.filter(isAfastado).length;
-      const ativos = v.length - afast;
-      const pct = v.length ? ativos / v.length * 100 : 0;
-      return [k,v.length,ativos,afast,pct];
-    })
-    .filter(x => x[1] >= 5)
-    .sort((a,b) => a[4] - b[4])
-    .slice(0,5);
-
-  el.innerHTML = rows.map(([k,total,ativos,afast,pct]) => `
-    <div class="rank">
-      <div>
-        <b>${k}</b>
-        <small>${fmtInt(ativos)} ativos · ${fmtInt(afast)} afastados · ${fmtPct(pct)} atividade</small>
-      </div>
-      <span class="statusPill ${pct < 75 ? "crit" : pct < 85 ? "att" : "ok"}">
-        ${pct < 75 ? "Crítico" : pct < 85 ? "Atenção" : "Monitorar"}
-      </span>
-    </div>
-  `).join("") || `<div class="hint">Sem ranking disponível.</div>`;
-}
-
-function parseCSV(text){
-  const lines = text.replace(/\r/g,"").split("\n").filter(l => l.trim() !== "");
-  const headers = splitCSVLine(lines[0]).map(h => h.trim());
-
-  return lines.slice(1).map(line => {
-    const values = splitCSVLine(line);
-    const obj = {};
-    headers.forEach((h,i) => obj[h] = values[i] ?? "");
-    return obj;
-  });
-}
-
+// ================= CSV =================
 function splitCSVLine(line){
   const result = [];
   let current = "";
   let insideQuotes = false;
 
-  for(let i = 0; i < line.length; i++){
+  for(let i=0;i<line.length;i++){
     const char = line[i];
-    const next = line[i + 1];
+    const next = line[i+1];
 
     if(char === '"' && insideQuotes && next === '"'){
       current += '"';
@@ -336,143 +46,120 @@ function splitCSVLine(line){
   return result;
 }
 
+function parseCSV(text){
+  const lines = text.replace(/\r/g,"").split("\n").filter(l=>l.trim());
+  const headers = splitCSVLine(lines[0]).map(h=>h.trim());
+
+  return lines.slice(1).map(line=>{
+    const values = splitCSVLine(line);
+    const obj = {};
+    headers.forEach((h,i)=>obj[h]=values[i]||"");
+    return obj;
+  });
+}
+
+// ================= CORE =================
+function pick(headers, names){
+  const normalized = headers.map(norm);
+
+  for(const n of names){
+    const i = normalized.findIndex(h=>h===norm(n));
+    if(i>=0) return headers[i];
+  }
+
+  for(const n of names){
+    const nn = norm(n);
+    const i = normalized.findIndex(h=>h.includes(nn));
+    if(i>=0) return headers[i];
+  }
+
+  return null;
+}
+
+function val(row,col){
+  return col ? clean(row[col]) : "";
+}
+
+// ================= REGRAS =================
+function isAfastado(row){
+  const v = norm(val(row,COL.afast));
+  return v && !v.includes("ATIVO");
+}
+
+function isOperacional(row){
+  const x = norm([
+    val(row,COL.tipo),
+    val(row,COL.funcaoCargo),
+    val(row,COL.descricao)
+  ].join(" "));
+
+  return x.includes("GARI") || x.includes("OPER") || x.includes("COLETA");
+}
+
+// ================= RENDER =================
+function render(){
+
+  const total = ROWS.length;
+  const afastados = ROWS.filter(isAfastado).length;
+  const ativos = total - afastados;
+
+  const operacionais = ROWS.filter(isOperacional).length;
+
+  const idades = ROWS.map(r=>+val(r,COL.idade)).filter(n=>n>0);
+  const acima55 = idades.filter(n=>n>=55).length;
+
+  // KPIs
+  $("kTotal").textContent = fmtInt(total);
+  $("kAtivos").textContent = fmtInt(ativos);
+  $("kAfast").textContent = fmtInt(afastados);
+  $("kRisco").textContent = idades.length ? fmtPct(acima55/idades.length*100) : "N/D";
+
+  $("opQtd").textContent = fmtInt(operacionais);
+  $("admQtd").textContent = fmtInt(total-operacionais);
+
+  const pctOper = total ? operacionais/total*100 : 0;
+  $("donutPct").textContent = fmtPct(pctOper);
+  $("donut").style.setProperty("--opPct", pctOper+"%");
+
+}
+
+// ================= LOAD =================
 async function loadData(){
+
   try{
-    hideError();
-    setLoading();
 
-    if($("updated")){
-      $("updated").textContent = "Atualizado em: carregando...";
-    }
+    const res = await fetch(CSV_URL + "&t=" + Date.now(), {cache:"no-store"});
+    if(!res.ok) throw new Error("Erro HTTP");
 
-    const url = CSV_URL + "&cachebuster=" + Date.now();
+    const text = await res.text();
+    const rows = parseCSV(text);
 
-    const res = await fetch(url, {
-      cache: "no-store"
-    });
+    ROWS = rows;
 
-    if(!res.ok){
-      throw new Error("HTTP " + res.status);
-    }
-
-    const csvText = await res.text();
-
-    if(!csvText || csvText.length < 20){
-      throw new Error("CSV vazio ou inválido.");
-    }
-
-    const rows = parseCSV(csvText);
-
-    if(!rows.length){
-      throw new Error("Nenhuma linha encontrada no CSV.");
-    }
-
-    ROWS = rows.filter(row => Object.values(row).some(v => clean(v)));
-
-    const headers = Object.keys(ROWS[0]);
+    const headers = Object.keys(rows[0]);
 
     COL = {
-      coddir: pick(headers,["CODDIR"]),
       dir: pick(headers,["DIRETORIA"]),
-      sup: pick(headers,["SUPERINTENDÊNCIA","SUPERINTENDENCIA"]),
+      sup: pick(headers,["SUPERINTENDÊNCIA"]),
       setor: pick(headers,["SETOR"]),
-      registro: pick(headers,["REGISTRO"]),
-      nome: pick(headers,["NOME"]),
-      sexo: pick(headers,["SEXO"]),
-      codCargo: pick(headers,["CÓDCARGO","CODCARGO"]),
-      funcaoCargo: pick(headers,["FUNCAOCARGO"]),
-      ref: pick(headers,["REFERENCIA","REFERÊNCIA"]),
-      admissao: pick(headers,["ADMISSÃO","ADMISSAO"]),
-      nascimento: pick(headers,["NASCIMENTO"]),
-      funcao: pick(headers,["FUNCAO","FUNÇÃO"]),
-      funcaoEc: pick(headers,["FUNCAO_EC"]),
-      categoriaEc: pick(headers,["CATEGORIA_EC"]),
-      codfreq: pick(headers,["CODFREQ"]),
+      ref: pick(headers,["REFERENCIA"]),
       afast: pick(headers,["AFASTAMENTO"]),
-      dtini: pick(headers,["DTINI"]),
-      dtfim: pick(headers,["DTFIM"]),
-      mnemonico: pick(headers,["MNEMONICO"]),
-      tipoAfastamento: pick(headers,["TIPOAFASTAMENTO"]),
-      vinculo: pick(headers,["VINCULO","VÍNCULO"]),
-      centroCusto: pick(headers,["CENTROCUSTO"]),
-      tipoCentroCusto: pick(headers,["TIPOCENTROCUSTO"]),
-      paiSetor: pick(headers,["PAISETOR"]),
-      descricao: pick(headers,["DESCRIÇÃO","DESCRICAO"]),
-      logradouro: pick(headers,["LOGRADOURO"]),
-      bairro: pick(headers,["BAIRRO"]),
-      cep: pick(headers,["CEP"]),
       tipo: pick(headers,["TIPOCARGO"]),
-      setorAnterior: pick(headers,["SETOR_ANTERIOR_GGQ02"]),
-      escolaridade: pick(headers,["ESCOLARIDADE"]),
-      endereco: pick(headers,["ENDEREÇO","ENDERECO"]),
-      bairroEnder: pick(headers,["BAIRROENDER"]),
-      cidadeEnder: pick(headers,["CIDADEENDER"]),
-      cepEnder: pick(headers,["CEPENDER"]),
-      estadoCivil: pick(headers,["ESTCIVIL"]),
-      cbo: pick(headers,["CBO"]),
-      regimeJur: pick(headers,["REGIMEJUR"]),
-      idade: pick(headers,["IDADEANOS"]),
-      idadeMeses: pick(headers,["IDADEMESES"]),
-      idadeDias: pick(headers,["IDADEDIAS"]),
-      raca: pick(headers,["RACA","RAÇA"]),
-      tempoCasaAnos: pick(headers,["TPCASAANOS"]),
-      tempoCasaMeses: pick(headers,["TPCASAMESES"]),
-      tempoCasaDias: pick(headers,["TPCASADIAS"]),
-      defFisica: pick(headers,["DEF_FÍSICA","DEF_FISICA"]),
-      defVisual: pick(headers,["DEF_VISUAL"]),
-      defAuditiva: pick(headers,["DEF_AUDITIVA"]),
-      defMental: pick(headers,["DEF_MENTAL"]),
-      defIntelectual: pick(headers,["DEF_INTELECTUAL"]),
-      defReabilitado: pick(headers,["DEF_REABILITADO"]),
-      defCota: pick(headers,["DEF_COTA"]),
-      filhoPcd: pick(headers,["POSSUI_FILHO_PCD"]),
-      sindicato: pick(headers,["SINDICATO"]),
-      percInsal: pick(headers,["PERCINSAL"]),
-      jornadaEntrada: pick(headers,["JORNADA_ENTRADA"]),
-      jornadaSaida: pick(headers,["JORNADA_SAÍDA","JORNADA_SAIDA"]),
-      jornadaSaidaIntervalo: pick(headers,["JORNADA_SAÍDA_INTERVALO","JORNADA_SAIDA_INTERVALO"]),
-      jornadaRetornoIntervalo: pick(headers,["JORNADA_RETORNO_INTERVALO"]),
-      jornada: pick(headers,["JORNADA"]),
-      tipoSetor: pick(headers,["TIPOSETOR"])
+      funcaoCargo: pick(headers,["FUNCAOCARGO"]),
+      descricao: pick(headers,["DESCRIÇÃO"]),
+      idade: pick(headers,["IDADEANOS"])
     };
 
-    if(!COL.dir){
-      throw new Error("Coluna DIRETORIA não localizada.");
-    }
-
-    if(!COL.setor){
-      throw new Error("Coluna SETOR não localizada.");
-    }
-
-    populateFilters();
     render();
-
-    if($("updated")){
-      $("updated").textContent = "Atualizado em: " + new Date().toLocaleString("pt-BR");
-    }
 
   }catch(err){
     console.error(err);
-
-    showError(
-      "Não foi possível carregar os dados via CSV publicado. " +
-      "Verifique se a planilha está publicada na Web, se a aba correta está no link e se a URL termina com output=csv. " +
-      "Erro: " + err.message
-    );
-
-    if($("updated")){
-      $("updated").textContent = "Atualizado em: erro no carregamento";
-    }
+    $("status").style.display="block";
+    $("status").textContent="Erro ao carregar dados (CSV).";
   }
 }
 
-["fDir","fSupCoord","fSetor","fRef"].forEach(id => {
-  document.addEventListener("change", e => {
-    if(e.target && e.target.id === id){
-      render();
-    }
-  });
-});
-
+// ================= INIT =================
 document.addEventListener("DOMContentLoaded", loadData);
+
 </script>
