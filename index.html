@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Perfil Funcional </title>
+<title>Perfil Funcional</title>
 
 <style>
 :root{
@@ -16,20 +16,12 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:Segoe UI,Arial,
 .app{max-width:1800px;margin:0 auto;padding:28px}
 
 .header{
-  display:flex;
-  align-items:center;
-  gap:28px;
-  padding:26px;
-  border:1px solid var(--line);
-  border-radius:22px;
-  background:#0a1b31;
+  display:flex;align-items:center;gap:28px;padding:26px;
+  border:1px solid var(--line);border-radius:22px;background:#0a1b31;
 }
 .logo{
-  width:250px;
-  max-height:70px;
-  object-fit:contain;
-  padding-right:26px;
-  border-right:1px solid rgba(255,255,255,.28);
+  width:250px;max-height:70px;object-fit:contain;
+  padding-right:26px;border-right:1px solid rgba(255,255,255,.28);
 }
 .titleBox{flex:1}
 .eyebrow{font-size:12px;font-weight:900;letter-spacing:.25em;color:#b8d4f2}
@@ -38,10 +30,15 @@ h1{margin:6px 0;font-size:38px}
 
 .status{display:none;margin:14px 0;padding:13px;border:1px solid var(--orange);border-radius:14px;background:#1b2130;color:#ffd4b8}
 
-.filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:16px 0}
+.filters{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  gap:12px;
+  margin:16px 0;
+}
 .field{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}
 label{display:block;font-size:10px;font-weight:900;letter-spacing:.18em;color:#b8d4f2;margin-bottom:8px}
-select{width:100%;background:transparent;color:#fff;border:0;font-weight:800;font-size:15px}
+select{width:100%;background:transparent;color:#fff;border:0;font-weight:800;font-size:15px;outline:none}
 option{background:#0d1f36}
 
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
@@ -93,8 +90,10 @@ h2{margin:0;font-size:18px}
 .ok{color:#83d99d}.att{color:#ffa02b}.crit{color:#ff7d72}
 .footer{margin-top:16px;color:#aebfd5;font-size:13px}
 
+@media(max-width:1300px){
+  .filters{grid-template-columns:1fr 1fr}
+}
 @media(max-width:1100px){
-  .filters{grid-template-columns:1fr}
   .kpis{grid-template-columns:repeat(2,1fr)}
   .grid,.bottom{grid-template-columns:1fr}
   .alerts{grid-template-columns:repeat(2,1fr)}
@@ -103,7 +102,7 @@ h2{margin:0;font-size:18px}
   .app{padding:14px}
   .header{flex-direction:column;align-items:flex-start}
   .logo{width:220px;border-right:0;padding-right:0}
-  .kpis,.alerts{grid-template-columns:1fr}
+  .filters,.kpis,.alerts{grid-template-columns:1fr}
   h1{font-size:32px}
 }
 </style>
@@ -130,8 +129,13 @@ h2{margin:0;font-size:18px}
   </div>
 
   <div class="field">
-    <label>Superintendência</label>
+    <label>SUPER/Coord</label>
     <select id="fSupCoord"><option>Carregando...</option></select>
+  </div>
+
+  <div class="field">
+    <label>Pai Setor</label>
+    <select id="fPaiSetor"><option>Carregando...</option></select>
   </div>
 
   <div class="field">
@@ -301,6 +305,18 @@ function numberFrom(v){
   return parseFloat(s)||0;
 }
 
+function supCoordVal(row){
+  return val(row,COL.supcoord) || "Não informado";
+}
+
+function paiSetorVal(row){
+  return val(row,COL.paisetor) || "Não informado";
+}
+
+function setorVal(row){
+  return val(row,COL.setor) || "Não informado";
+}
+
 function isAfastado(row){
   const afast=norm(val(row,COL.afast));
   const tipo=norm(val(row,COL.tipoAfastamento));
@@ -321,10 +337,6 @@ function isOperacional(row){
   return x.includes("OPER") || x.includes("GARI") || x.includes("MOTOR") || x.includes("FISCAL") || x.includes("AGENTE") || x.includes("LIMP") || x.includes("COLETA");
 }
 
-function supVal(row){
-  return val(row,COL.sup) || "Não informado";
-}
-
 function groupBy(arr,fn){
   return arr.reduce((acc,row)=>{
     const key=fn(row) || "Não informado";
@@ -338,9 +350,17 @@ function fillSelect(id,values,label){
   if(!el) return;
 
   const current=el.value;
-  const list=[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
 
-  el.innerHTML=`<option value="">${label}</option>` + list.map(v=>`<option value="${String(v).replaceAll('"','&quot;')}">${v}</option>`).join("");
+  const list=[...new Set(
+    values
+      .map(v=>clean(v))
+      .filter(v=>v && v !== "-" && v !== "Não informado")
+  )].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+
+  el.innerHTML=`<option value="">${label}</option>` + list.map(v=>{
+    const safe = String(v).replaceAll('"','&quot;');
+    return `<option value="${safe}">${v}</option>`;
+  }).join("");
 
   if([...el.options].some(o=>o.value===current)){
     el.value=current;
@@ -349,41 +369,49 @@ function fillSelect(id,values,label){
   }
 }
 
-function rowsForFilterLevel(level){
-  const dir = $("fDir")?.value || "";
-  const sup = $("fSupCoord")?.value || "";
-
-  return ROWS.filter(row => {
-    if(level >= 1 && dir && val(row,COL.dir) !== dir) return false;
-    if(level >= 2 && sup && supVal(row) !== sup) return false;
-    return true;
-  });
-}
-
 function updateFilters(changedId){
   if(changedId === "fDir"){
     $("fSupCoord").value = "";
+    $("fPaiSetor").value = "";
     $("fSetor").value = "";
   }
 
   if(changedId === "fSupCoord"){
+    $("fPaiSetor").value = "";
+    $("fSetor").value = "";
+  }
+
+  if(changedId === "fPaiSetor"){
     $("fSetor").value = "";
   }
 
   fillSelect("fDir", ROWS.map(r=>val(r,COL.dir)), "Todas as Diretorias");
 
-  const rowsSup = rowsForFilterLevel(1);
-  fillSelect("fSupCoord", rowsSup.map(r=>supVal(r)), "Todas as Superintendências");
+  const rowsSup = ROWS.filter(r =>
+    !$("fDir").value || val(r,COL.dir) === $("fDir").value
+  );
 
-  const rowsSetor = rowsForFilterLevel(2);
-  fillSelect("fSetor", rowsSetor.map(r=>val(r,COL.setor)), "Todos os Setores");
+  fillSelect("fSupCoord", rowsSup.map(r=>supCoordVal(r)), "Todas as SUPER/Coord");
+
+  const rowsPai = rowsSup.filter(r =>
+    !$("fSupCoord").value || supCoordVal(r) === $("fSupCoord").value
+  );
+
+  fillSelect("fPaiSetor", rowsPai.map(r=>paiSetorVal(r)), "Todos os Pai Setores");
+
+  const rowsSetor = rowsPai.filter(r =>
+    !$("fPaiSetor").value || paiSetorVal(r) === $("fPaiSetor").value
+  );
+
+  fillSelect("fSetor", rowsSetor.map(r=>setorVal(r)), "Todos os Setores");
 }
 
 function filteredRows(){
   return ROWS.filter(row =>
-    (!$("fDir")?.value || val(row,COL.dir)===$("fDir").value) &&
-    (!$("fSupCoord")?.value || supVal(row)===$("fSupCoord").value) &&
-    (!$("fSetor")?.value || val(row,COL.setor)===$("fSetor").value)
+    (!$("fDir").value || val(row,COL.dir)===$("fDir").value) &&
+    (!$("fSupCoord").value || supCoordVal(row)===$("fSupCoord").value) &&
+    (!$("fPaiSetor").value || paiSetorVal(row)===$("fPaiSetor").value) &&
+    (!$("fSetor").value || setorVal(row)===$("fSetor").value)
   );
 }
 
@@ -403,20 +431,20 @@ function render(){
   const pctRisco=idades.length?acima65/idades.length*100:0;
   const pctOper=total?operacionais/total*100:0;
 
-  if($("kTotal")) $("kTotal").textContent=fmtInt(total);
-  if($("kAtivos")) $("kAtivos").textContent=fmtInt(ativos);
-  if($("kAfast")) $("kAfast").textContent=fmtInt(afastados);
-  if($("kRisco")) $("kRisco").textContent=idades.length?fmtPct(pctRisco):"N/D";
+  $("kTotal").textContent=fmtInt(total);
+  $("kAtivos").textContent=fmtInt(ativos);
+  $("kAfast").textContent=fmtInt(afastados);
+  $("kRisco").textContent=idades.length?fmtPct(pctRisco):"N/D";
 
-  if($("nAtivos")) $("nAtivos").textContent=fmtPct(pctAtivos)+" disponíveis";
-  if($("nAfast")) $("nAfast").textContent=fmtPct(pctAfast)+" do total";
-  if($("nRisco")) $("nRisco").textContent=idades.length?fmtInt(acima65)+" empregados com 65 anos ou mais":"idade não localizada";
+  $("nAtivos").textContent=fmtPct(pctAtivos)+" disponíveis";
+  $("nAfast").textContent=fmtPct(pctAfast)+" do total";
+  $("nRisco").textContent=idades.length?fmtInt(acima65)+" empregados com 65 anos ou mais":"idade não localizada";
 
-  if($("opQtd")) $("opQtd").textContent=fmtInt(operacionais);
-  if($("admQtd")) $("admQtd").textContent=fmtInt(administrativos);
-  if($("donutPct")) $("donutPct").textContent=fmtPct(pctOper);
-  if($("donut")) $("donut").style.setProperty("--opPct",pctOper+"%");
-  if($("compHint")) $("compHint").textContent=pctOper>=60?"Predominância operacional coerente com a atividade-fim.":"Maior peso relativo administrativo.";
+  $("opQtd").textContent=fmtInt(operacionais);
+  $("admQtd").textContent=fmtInt(administrativos);
+  $("donutPct").textContent=fmtPct(pctOper);
+  $("donut").style.setProperty("--opPct",pctOper+"%");
+  $("compHint").textContent=pctOper>=60?"Predominância operacional coerente com a atividade-fim.":"Maior peso relativo administrativo.";
 
   renderDirBars(data,total);
   renderActivityCols(data);
@@ -426,7 +454,11 @@ function render(){
 
 function renderDirBars(data,total){
   const el=$("dirBars"); if(!el) return;
-  const rows=Object.entries(groupBy(data,r=>val(r,COL.dir))).map(([k,v])=>[k,v.length]).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const rows=Object.entries(groupBy(data,r=>val(r,COL.dir)))
+    .map(([k,v])=>[k,v.length])
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,6);
+
   const max=rows[0]?.[1] || 1;
 
   el.innerHTML=rows.map(([k,v])=>`
@@ -441,11 +473,14 @@ function renderDirBars(data,total){
 
 function renderActivityCols(data){
   const el=$("activityCols"); if(!el) return;
-  const rows=Object.entries(groupBy(data,r=>val(r,COL.dir))).map(([k,v])=>{
-    const afast=v.filter(isAfastado).length;
-    const pct=v.length?(v.length-afast)/v.length*100:0;
-    return [k,v.length,pct];
-  }).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const rows=Object.entries(groupBy(data,r=>val(r,COL.dir)))
+    .map(([k,v])=>{
+      const afast=v.filter(isAfastado).length;
+      const pct=v.length?(v.length-afast)/v.length*100:0;
+      return [k,v.length,pct];
+    })
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,6);
 
   el.innerHTML=rows.map(([k,_,p])=>`
     <div class="colWrap">
@@ -469,12 +504,16 @@ function renderAlerts(total,pctAfast,pctRisco,pctOper){
 
 function renderRanking(data){
   const el=$("ranking"); if(!el) return;
-  const rows=Object.entries(groupBy(data,r=>val(r,COL.dir))).map(([k,v])=>{
-    const afast=v.filter(isAfastado).length;
-    const ativos=v.length-afast;
-    const pct=v.length?ativos/v.length*100:0;
-    return [k,v.length,ativos,afast,pct];
-  }).filter(x=>x[1]>=5).sort((a,b)=>a[4]-b[4]).slice(0,5);
+  const rows=Object.entries(groupBy(data,r=>val(r,COL.dir)))
+    .map(([k,v])=>{
+      const afast=v.filter(isAfastado).length;
+      const ativos=v.length-afast;
+      const pct=v.length?ativos/v.length*100:0;
+      return [k,v.length,ativos,afast,pct];
+    })
+    .filter(x=>x[1]>=5)
+    .sort((a,b)=>a[4]-b[4])
+    .slice(0,5);
 
   el.innerHTML=rows.map(([k,total,ativos,afast,pct])=>`
     <div class="rank">
@@ -502,9 +541,10 @@ async function loadData(){
 
     COL={
       coddir:pick(headers,["CODDIR"]),
-      dir:pick(headers,["DIRETORIA"]),
-      sup:pick(headers,["SUPERINTENDÊNCIA","SUPERINTENDENCIA"]),
-      setor:pick(headers,["SETOR"]),
+      dir:pick(headers,["DIRETORIA","Diretoria"]),
+      supcoord:pick(headers,["SUPER/Coord","SUPER_COORD","SUPER COORD","SUP/COORD","SUP_COORD","SUPERINTENDÊNCIA","SUPERINTENDENCIA"]),
+      paisetor:pick(headers,["PAISETOR","PAI SETOR","PAI_SETOR"]),
+      setor:pick(headers,["SETOR","Setor"]),
       registro:pick(headers,["REGISTRO"]),
       sexo:pick(headers,["SEXO"]),
       funcaoCargo:pick(headers,["FUNCAOCARGO"]),
@@ -527,12 +567,15 @@ async function loadData(){
     };
 
     if(!COL.dir) throw new Error("Coluna DIRETORIA não localizada.");
+    if(!COL.supcoord) throw new Error("Coluna SUPER/Coord não localizada.");
+    if(!COL.paisetor) throw new Error("Coluna PAISETOR não localizada.");
     if(!COL.setor) throw new Error("Coluna SETOR não localizada.");
 
     updateFilters("");
     render();
 
-    if($("updated")) $("updated").textContent="Atualizado em: "+new Date().toLocaleString("pt-BR");
+    $("updated").textContent="Atualizado em: "+new Date().toLocaleString("pt-BR");
+
   }catch(err){
     console.error(err);
     showError("Não foi possível carregar os dados via CSV publicado. Erro: "+err.message);
@@ -540,7 +583,7 @@ async function loadData(){
   }
 }
 
-["fDir","fSupCoord","fSetor"].forEach(id=>{
+["fDir","fSupCoord","fPaiSetor","fSetor"].forEach(id=>{
   document.addEventListener("change",e=>{
     if(e.target && e.target.id===id){
       updateFilters(id);
